@@ -142,18 +142,81 @@ def _mesh_xy_center_offset(
     return mx, my
 
 
-def _resolve_bed_dimensions(host_config: dict[str, Any] | None) -> tuple[float, float]:
-    """Use actual printer dimensions without enlarging a small bed silently."""
-    config = host_config or {}
+def _resolve_printable_limits(
+    host_config: dict[str, Any] | None,
+) -> tuple[float, float, float]:
+    """Validate every supplied limit; defaults apply only to absent keys.
+
+    Direct host values take precedence over nested printer values. Height aliases
+    use max_z, bed_z, then printable_height, in that order, by key presence.
+    Even a lower-priority supplied alias must be a valid positive finite limit.
+    """
+    if host_config is None:
+        config = {}
+    elif isinstance(host_config, dict):
+        config = host_config
+    else:
+        raise ValueError("Printer configuration must be an object")
     printer = config.get("printer", {})
+    if not isinstance(printer, dict):
+        raise ValueError("Nested printer configuration must be an object")
+
+    sources = (config, printer)
+    height_keys = ("max_z", "bed_z", "printable_height")
+    parsed = []
+    for source in sources:
+        values = {}
+        for key in ("bed_x", "bed_y", *height_keys):
+            if key not in source:
+                continue
+            raw = source[key]
+            try:
+                value = float(raw)
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise ValueError(
+                    f"Invalid printable limit {key}: expected a positive finite number"
+                ) from exc
+            minimum = 8.0 if key in ("bed_x", "bed_y") else 0.0
+            if isinstance(raw, bool) or not math.isfinite(value) or value <= minimum:
+                raise ValueError(
+                    f"Invalid printable limit {key}: expected a positive finite number"
+                )
+            values[key] = value
+        parsed.append(values)
+
     dimensions = []
     for key in ("bed_x", "bed_y"):
-        raw = config.get(key, printer.get(key, 220.0))
-        value = float(raw)
-        if not math.isfinite(value) or value <= 8:
-            raise ValueError("Invalid printable bed dimensions")
-        dimensions.append(value)
-    return tuple(dimensions)
+        dimensions.append(
+            next((source[key] for source in parsed if key in source), 220.0)
+        )
+    height = next(
+        (source[key] for source in parsed for key in height_keys if key in source),
+        1000.0,
+    )
+    return dimensions[0], dimensions[1], height
+
+
+def _resolve_bed_dimensions(host_config: dict[str, Any] | None) -> tuple[float, float]:
+    """Return actual dimensions after validating all explicitly supplied limits."""
+    bed_x, bed_y, _ = _resolve_printable_limits(host_config)
+    return bed_x, bed_y
+
+
+def _validate_xml_text(value: str, field: str) -> str:
+    """Reject characters XML 1.0 cannot represent before creating an archive."""
+    for character in value:
+        code = ord(character)
+        valid = (
+            code in (0x09, 0x0A, 0x0D)
+            or 0x20 <= code <= 0xD7FF
+            or 0xE000 <= code <= 0xFFFD
+            or 0x10000 <= code <= 0x10FFFF
+        )
+        if not valid:
+            raise ValueError(
+                f"{field} contains a character invalid in XML 1.0 (U+{code:04X})"
+            )
+    return value
 
 
 def _resolve_line_width(host_config: dict[str, Any] | None) -> float:
@@ -358,7 +421,7 @@ def write_orca_3mf(
     if not out_path.parent.exists():
         out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    bed_x, bed_y = _resolve_bed_dimensions(host_config)
+    bed_x, bed_y, max_z = _resolve_printable_limits(host_config)
     cx, cy = bed_x * 0.5, bed_y * 0.5
 
     parsed_items: list[
@@ -376,7 +439,9 @@ def write_orca_3mf(
         else:
             raise ValueError(f"Invalid item tuple at index {idx}: {entry!r}")
 
-        item_name = str(raw_name or f"Part_{idx + 1}").strip() or f"Part_{idx + 1}"
+        raw_item_name = str(raw_name or f"Part_{idx + 1}")
+        _validate_xml_text(raw_item_name, "Object name")
+        item_name = raw_item_name.strip() or f"Part_{idx + 1}"
         vertices, triangles, _ = _extract_mesh_arrays(mesh)
         ext = _mesh_xy_extents(mesh, vertices)
         local_mid = _mesh_xy_center_offset(mesh, vertices)
@@ -431,14 +496,14 @@ def write_orca_3mf(
             raise ValueError(
                 "An object extends beyond the printable bed; export individual parts"
             )
-        if np.min(placed[:, 2]) < -0.001 or np.max(placed[:, 2]) > float(
-            (host_config or {}).get("max_z", 1000)
-        ):
+        if np.min(placed[:, 2]) < -0.001 or np.max(placed[:, 2]) > max_z:
             raise ValueError("An object exceeds the printable height")
 
-    title = str(
+    raw_title = str(
         (params or {}).get("name") or parsed_items[0][0] or "Orca Thread Studio"
-    ).strip()
+    )
+    _validate_xml_text(raw_title, "Project title")
+    title = raw_title.strip()
     escaped_title = _xml_escape(title, {'"': "&quot;"})
     today_iso = _dt.date.today().isoformat()
     ns_seed = uuid.UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")

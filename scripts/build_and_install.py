@@ -45,7 +45,7 @@ MODULE_ORDER: list[str] = [
     "plugin_main.py",
 ]
 
-DEFAULT_PLUGIN_VERSION = "1.0.0"
+DEFAULT_PLUGIN_VERSION = "1.0.1"
 PLUGIN_VERSION = (
     os.environ.get("ORCA_PLUGIN_VERSION", "").strip().lstrip("v")
     or DEFAULT_PLUGIN_VERSION
@@ -335,8 +335,20 @@ def build_bundle() -> Path:
         "if __name__ not in _orca_init_sys.modules:\n"
         "    _orca_init_sys.modules[__name__] = _orca_init_types.ModuleType(__name__)\n"
     )
+    license_text = (PROJECT_ROOT / "LICENSE").read_text(encoding="utf-8").strip()
+    license_notice = (
+        "\n".join("# " + line if line else "#" for line in license_text.splitlines())
+        + "\n"
+    )
     bundled_code = (
-        PEP723_HEADER + "\n" + future_stmt + "\n" + module_bootstrap + "".join(sections)
+        PEP723_HEADER
+        + "\n"
+        + license_notice
+        + "\n"
+        + future_stmt
+        + "\n"
+        + module_bootstrap
+        + "".join(sections)
     )
 
     # Validate PEP 723 TOML & Python compilation before writing
@@ -475,55 +487,86 @@ def build_wheel() -> Path:
     return whl_path
 
 
-def install_plugin(bundle_path: Path) -> Path:
-    """Install `orca_thread_generator.py` and `icon.svg` into OrcaSlicer's `orca_plugins`,
-    preserving OrcaSlicer's `.install_state.json` / `install_state.json` untouched.
-    """
-    install_dir = get_install_dir()
-    install_dir.mkdir(parents=True, exist_ok=True)
+def _atomic_install_file(source: Path, destination: Path, install_dir: Path) -> None:
+    """Replace the directory entry without following a destination link.
 
-    # Remove any stale .py, .pyc, .pyo, .whl files or __pycache__ directories while
-    # strictly preserving `.install_state.json` / `install_state.json` and `icon.svg`.
+    A same-directory temporary file also leaves the prior destination intact if
+    copying fails. Parent resolution is checked before creation and replacement.
+    """
+    if destination.parent.resolve() != install_dir:
+        raise RuntimeError("Installation file parent escaped the validated directory")
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            dir=install_dir,
+            prefix=".orca_thread_install_",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
+            with source.open("rb") as original:
+                shutil.copyfileobj(original, handle)
+            handle.flush()
+            os.fsync(handle.fileno())
+        if destination.parent.resolve() != install_dir:
+            raise RuntimeError("Installation file parent changed during copying")
+        os.replace(temporary, destination)
+        temporary = None
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def install_plugin(bundle_path: Path) -> Path:
+    """Install two files only inside this plugin's validated directory.
+
+    Preserve install-state files and replace old bundle/icon links atomically,
+    so a link can never redirect writes into another plugin or arbitrary file.
+    """
+    plugin_root = (get_orca_data_dir() / "orca_plugins").resolve()
+    install_dir = get_install_dir().resolve()
+    expected_dir = plugin_root / "orca_thread_generator"
+    if install_dir != expected_dir:
+        raise RuntimeError(
+            "Installation target is outside the dedicated Thread plugin directory"
+        )
+    install_dir.mkdir(parents=True, exist_ok=True)
+    if install_dir.resolve() != expected_dir:
+        raise RuntimeError("Installation directory changed after validation")
+
     for item in list(install_dir.iterdir()):
         if item.name in PRESERVED_SIDE_FILES:
             continue
         if item.is_dir() and item.name == "__pycache__":
-            shutil.rmtree(item, ignore_errors=True)
+            if not item.resolve().is_relative_to(install_dir):
+                raise RuntimeError("Refusing to remove an external cache directory")
+            shutil.rmtree(item)
         elif item.is_file() and item.suffix.lower() in {".py", ".pyc", ".pyo", ".whl"}:
             item.unlink()
 
     for cache_dir in list(install_dir.rglob("__pycache__")):
-        shutil.rmtree(cache_dir, ignore_errors=True)
+        if not cache_dir.resolve().is_relative_to(install_dir):
+            raise RuntimeError("Refusing to remove an external cache directory")
+        shutil.rmtree(cache_dir)
 
-    dest_py = install_dir / "orca_thread_generator.py"
-    shutil.copyfile(bundle_path, dest_py)
-
+    _atomic_install_file(
+        Path(bundle_path), install_dir / "orca_thread_generator.py", install_dir
+    )
     if ICON_SRC_PATH.is_file():
-        shutil.copyfile(ICON_SRC_PATH, install_dir / "icon.svg")
+        _atomic_install_file(ICON_SRC_PATH, install_dir / "icon.svg", install_dir)
 
-    # Enforce strict OrcaSlicer.dll v2.5.1 directory invariants
     py_files = list(install_dir.glob("*.py"))
-    whl_files = list(install_dir.glob("*.whl"))
-    pyc_files = [*install_dir.rglob("*.pyc"), *install_dir.rglob("*.pyo")]
-    pycache_dirs = list(install_dir.rglob("__pycache__"))
-
     if len(py_files) != 1 or py_files[0].name != "orca_thread_generator.py":
-        raise RuntimeError(
-            f"Expected strictly 1 .py file in {install_dir}, found: {py_files}"
-        )
-    if whl_files:
-        raise RuntimeError(
-            f"Found forbidden .whl file(s) in {install_dir}: {whl_files}"
-        )
-    if pyc_files:
-        raise RuntimeError(
-            f"Found forbidden bytecode file(s) in {install_dir}: {pyc_files}"
-        )
-    if pycache_dirs:
-        raise RuntimeError(
-            f"Found forbidden __pycache__ in {install_dir}: {pycache_dirs}"
-        )
-
+        raise RuntimeError(f"Expected strictly one plugin Python file in {install_dir}")
+    if list(install_dir.glob("*.whl")):
+        raise RuntimeError("A wheel must not remain in the installed plugin directory")
+    if [
+        *install_dir.rglob("*.pyc"),
+        *install_dir.rglob("*.pyo"),
+        *install_dir.rglob("__pycache__"),
+    ]:
+        raise RuntimeError("Installed plugin directory contains bytecode caches")
     return install_dir
 
 
