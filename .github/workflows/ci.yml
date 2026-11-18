@@ -1,0 +1,83 @@
+name: Build, test and release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install geometry dependency
+        run: python -m pip install "numpy>=1.26"
+      - name: Build standalone plugins and wheel without installing
+        run: python -B -W error scripts/build_and_install.py --no-install
+      - name: Run geometry, export, UI and bridge verification
+        run: python -B -W error -m unittest discover -s tests -v
+      - name: Preserve verified distribution artifacts
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: orca_thread_generator-dist
+          path: |
+            dist/orca_thread_generator.py
+            dist/orca_thread_generator_any.py
+            dist/orca_thread_generator-*-py3-none-any.whl
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish GitHub release assets
+    needs: verify
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install geometry dependency
+        run: python -m pip install "numpy>=1.26"
+      - name: Build the tagged version
+        env:
+          ORCA_PLUGIN_VERSION: ${{ github.ref_name }}
+        run: python -B -W error scripts/build_and_install.py --no-install
+      - name: Publish verified bundles to GitHub
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" dist/orca_thread_generator.py dist/orca_thread_generator_any.py dist/orca_thread_generator-*-py3-none-any.whl src/thread_studio/icon.svg --clobber
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG" dist/orca_thread_generator.py dist/orca_thread_generator_any.py dist/orca_thread_generator-*-py3-none-any.whl src/thread_studio/icon.svg
+          fi

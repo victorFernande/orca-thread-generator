@@ -1,0 +1,15 @@
+# Geometry and verification contract
+
+`normalize_params(raw)` returns a serializable parameter dictionary with validated finite dimensions. Public entrypoints are `generate_parts`, `collect_target_meshes` and `generate_thread_calibration_kit`, each returning named `MeshData` objects. `MeshData` contains float32 vertices, int32 triangle indices, outward unit normals, millimetre bounds and cubic-centimetre volume. User-facing strings remain in the bilingual interface.
+
+Geometry is a single radial surface of revolution whose radius also depends on polar angle and axial position. Thread crests are coordinates on that surface; no overlapping helix solid is appended. Closed meridian paths connect exterior, rim, interior and floor. Poles use one shared vertex instead of zero-area triangles. Through-bore components have Euler characteristic 0; closed-bottom containers/lids and solid bolts have characteristic 2. The signed volume fixes global orientation, and tests also check paired edge direction and nondegenerate faces.
+
+The phase is z/pitch − handedness × starts × theta/(2π); lead is pitch × starts. The physical cap prints open upward. Assembly rotates it 180 degrees about X and translates by container height + lid floor thickness. Female surface quads use the opposite diagonal so this inversion yields the same assembled tessellation as the male surface. This matters: analytical gap alone cannot prevent triangular interpolation from causing overlap. Regression tests section the actual transformed meshes and verify a positive gap, including 3-start low-resolution threads with just 0.05 mm diametral clearance.
+
+The 2D loupe evaluates the same analytic profile equations. During screw motion, rotation and lead-based axial translation cancel the phase change until the ends leave the engaged region. Sliding a lid independently changes phase and can reveal interference. This is geometric interference only; real printed fits still require calibration.
+
+Exports reject nonfinite coordinates, invalid indices and degenerate triangles. 3MF retains real object scale and rejects a layout outside the selected bed or printable height. Generation/export runs on background workers. Preview revisions discard stale work, preserve an existing preview during generation, and publish the latest completed arrays. Page and dock use one shared controller, including undo/redo.
+
+The native registration test uses a fallback host only outside OrcaSlicer. It checks registration and message contracts, not a live C++ host. Windows/macOS/Linux transports must also be smoke-tested in the actual application on each operating system. A completed send is labeled as an import request, not confirmed mesh loading.
+
+Run `python -B -W error -m unittest discover -s tests -v` and `python -B scripts/build_and_install.py --no-install`. JavaScript syntax is checked with Node.js when present. The bundle and wheel are loaded in isolated temporary locations. Test/export outputs are temporary or stored in local plugin data and must not enter the public repository.

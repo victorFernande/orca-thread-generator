@@ -1,0 +1,67 @@
+# Python environments, caches and build intermediates
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+.venv/
+venv/
+env/
+.tox/
+.nox/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+junit*.xml
+
+# Private machine state and local work (never release)
+.env
+.env.*
+!.env.example
+/.credentials/
+/.secrets/
+/.private/
+/local/
+/exports/
+/test-output/
+/logs/
+/.codex/
+/.agents/
+/.claude/
+/.cursor/
+/.playwright-cli/
+/node_modules/
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+*.swp
+*.swo
+*~
+.install_state.json
+install_state.json
+*.key
+*.pem
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+
+# Only the official installation artifacts belong in dist.
+# Keep the directory and the source/docs/assets/JSON/geometry fixtures visible.
+/dist/*
+!/dist/orca_thread_generator.py
+!/dist/orca_thread_generator_any.py
+!/dist/orca_thread_generator-*-py3-none-any.whl
+
+# Operating system metadata
+.DS_Store
+Thumbs.db
+Desktop.ini

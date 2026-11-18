@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+[project]
+name = "orca-thread-generator"
+version = "1.0.0"
+description = "Offline parametric thread, bottle and adapter studio for OrcaSlicer"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+dependencies = ["numpy>=1.26"]
+[tool.setuptools.packages.find]
+where = ["src"]
+[tool.setuptools.package-data]
+thread_studio = ["icon.svg"]
+[tool.orcaslicer.plugin]
+id = "orca-thread-studio"
+name = "Orca Thread Studio"
+description = "Offline threaded containers, caps, adapters and fasteners"
+author = "Orca Thread Studio"
+version = "1.0.0"
