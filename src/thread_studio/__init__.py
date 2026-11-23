@@ -10,3 +10,5 @@ from .plugin_main import (
     ThreadStudioPageCapability,
     ThreadStudioDockCapability,
 )
+
+__version__ = "1.1.0"

@@ -116,7 +116,8 @@ class ExportBridgeTests(unittest.TestCase):
             release.set()
             c._last_plater_worker.join(5)
             self.assertFalse(out[-1]["ok"])
-            self.assertIn("test refusal", out[-1]["message"])
+        self.assertEqual(out[-1]["message"], "Transport failed.")
+        self.assertIn("test refusal", out[-1]["detail"])
 
     def test_html_javascript_syntax_and_offline(self):
         html = get_studio_html()
@@ -128,7 +129,7 @@ class ExportBridgeTests(unittest.TestCase):
                 path = Path(d) / "ui.js"
                 path.write_text(script, encoding="utf-8")
                 result = subprocess.run(
-                    ["node", "--check", str(path)], capture_output=True, text=True
+                    ["node", "--check", str(path)], capture_output=True, text=True, encoding="utf-8"
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
 
@@ -138,24 +139,19 @@ class ExportBridgeTests(unittest.TestCase):
         from thread_studio.thread_math import thread_radius
         import numpy as np
 
-        html = get_studio_html()
-        source = html[
-            html.index("function radialProfile(") : html.index("function drawLoupe(")
-        ]
         for standard in ("iso_metric", "fdm_trapezoid_45", "pco1881"):
             params = normalize_params(dict(standard=standard, axial_clearance=0.2))
+            html = get_studio_html(initial_context=dict(params=params))
+            source = html.split("<script>", 1)[1].split("</script>", 1)[0]
             values = np.linspace(0.01, params["thread_length"] - 0.01, 81)
             program = (
-                "const params="
-                + json.dumps(params)
-                + ";"
-                + source
+                source
                 + ";process.stdout.write(JSON.stringify("
                 + json.dumps(values.tolist())
-                + ".map(q=>[radialProfile(q,false),radialProfile(q,true)])));"
+                + ".map(q=>[__threadStudio.radialProfile(q,false),__threadStudio.radialProfile(q,true)])));"
             )
             result = subprocess.run(
-                ["node", "-e", program], capture_output=True, text=True
+                ["node"], input=program, capture_output=True, text=True, encoding="utf-8"
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             expected = np.c_[

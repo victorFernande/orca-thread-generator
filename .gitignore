@@ -47,6 +47,7 @@ junit*.xml
 *~
 .install_state.json
 install_state.json
+ui_preferences.json
 *.key
 *.pem
 *.p12

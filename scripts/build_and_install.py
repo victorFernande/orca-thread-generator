@@ -14,6 +14,7 @@ import ast
 import base64
 import csv
 import hashlib
+import importlib.util
 import io
 import json
 import os
@@ -37,6 +38,8 @@ DIST_ANY_BUNDLE_PATH = DIST_DIR / "orca_thread_generator_any.py"
 ICON_SRC_PATH = SRC_PKG_DIR / "icon.svg"
 
 MODULE_ORDER: list[str] = [
+    "language_packs.py",
+    "locale_catalog.py",
     "schema.py",
     "thread_math.py",
     "mesh_generator.py",
@@ -47,7 +50,7 @@ MODULE_ORDER: list[str] = [
     "plugin_main.py",
 ]
 
-DEFAULT_PLUGIN_VERSION = "1.0.1"
+DEFAULT_PLUGIN_VERSION = "1.1.0"
 PLUGIN_VERSION = (
     os.environ.get("ORCA_PLUGIN_VERSION", "").strip().lstrip("v")
     or DEFAULT_PLUGIN_VERSION
@@ -309,6 +312,14 @@ def _compact_studio_template(source: str, literal_name: str) -> str:
     return compact
 
 
+def _read_build_language_packs() -> dict:
+    spec = importlib.util.spec_from_file_location("_thread_language_pack_validation", SRC_PKG_DIR / "language_packs.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    packs, _ = module.load_language_packs(SRC_PKG_DIR / "locales", embedded={}, strict=True)
+    return packs
+
+
 def build_bundle() -> Path:
     """Compile all `src/thread_studio/*.py` modules into `dist/orca_thread_generator.py`."""
     missing = [m for m in MODULE_ORDER if not (SRC_PKG_DIR / m).is_file()]
@@ -317,6 +328,7 @@ def build_bundle() -> Path:
             f"Missing required source module(s) in {SRC_PKG_DIR}: {missing}"
         )
 
+    language_packs = _read_build_language_packs()
     raw_sources: dict[str, str] = {}
     private_defs_by_mod: dict[str, set[str]] = {}
     class_attrs_by_mod: dict[str, set[str]] = {}
@@ -347,6 +359,10 @@ def build_bundle() -> Path:
             src = _rename_colliding_privates(src, mod_stem, rename_set)
 
         transformed, fut = _strip_internal_imports(src)
+        if mod_file == "language_packs.py":
+            payload = json.dumps(language_packs, ensure_ascii=False, separators=(",", ":")).encode("utf8")
+            packed = base64.b85encode(zlib.compress(payload, 9)).decode("ascii")
+            transformed = transformed.replace("_BUNDLED_LANGUAGE_PACKS = {}", "_BUNDLED_LANGUAGE_PACKS = json.loads(zlib.decompress(base64.b85decode(" + repr(packed) + ")))")
         if mod_file == "studio_ui.py":
             transformed = _compact_studio_template(transformed, "_HTML")
         all_future_features.update(fut)
@@ -442,7 +458,9 @@ def build_wheel() -> Path:
     )
 
     dist_info_dir = f"orca_thread_generator-{version}.dist-info"
-    pkg_files = ["__init__.py", *MODULE_ORDER, "icon.svg"]
+    _read_build_language_packs()
+    locale_files = [path.relative_to(SRC_PKG_DIR).as_posix() for path in sorted((SRC_PKG_DIR / "locales").glob("*.json"))]
+    pkg_files = ["__init__.py", *MODULE_ORDER, "icon.svg", *locale_files]
     missing = [f for f in pkg_files if not (SRC_PKG_DIR / f).is_file()]
     if missing:
         raise FileNotFoundError(

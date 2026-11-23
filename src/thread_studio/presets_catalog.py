@@ -160,11 +160,64 @@ def delete_user_preset(directory, preset_id):
 
 
 def generate_random_printable_params(seed=None, current_params=None):
+    """Explore the current family without granting experimental confirmations.
+
+    Bottle-standard dimensions stay fixed by normalization. An unconfirmed
+    Mason 86 design deliberately remains blocked until a human checks it.
+    """
     rng = random.Random(seed)
-    p = normalize_params(current_params)
+    candidate = dict(current_params or {})
+    candidate["measurements_confirmed"] = False
+    p = normalize_params(candidate)
     p.update(
-        nominal_dia=rng.choice([24, 32, 40, 50]),
-        pitch=rng.choice([2.0, 2.5, 3.0]),
-        texture=rng.choice(["knurled", "fluted", "smooth"]),
+        texture=rng.choice(["knurled", "fluted", "smooth", "faceted"]),
+        knurl_depth=rng.choice([0.2, 0.4, 0.6]),
+        knurl_count=rng.choice([24, 32, 40, 48]),
+        diametral_clearance=rng.choice([0.18, 0.22, 0.26, 0.30]),
+        axial_clearance=rng.choice([0.08, 0.12, 0.16]),
+        higbee_turns=rng.choice([0.45, 0.6, 0.75]),
+        wall_thickness=rng.choice([1.6, 2.0, 2.4]),
+        floor_thickness=rng.choice([1.6, 2.0, 2.4]),
     )
+    family = p["module"]
+    if family == "container_and_lid":
+        diameter = rng.choice([28.0, 32.0, 40.0, 48.0, 60.0])
+        pitch = rng.choice([2.0, 2.5, 3.0])
+        p.update(
+            nominal_dia=diameter,
+            diameter=diameter + 6,
+            height=rng.choice([40.0, 50.0, 65.0, 80.0]),
+            pitch=pitch,
+            thread_length=pitch * rng.choice([3, 4, 5]),
+            starts=rng.choice([1, 2, 3]),
+        )
+    elif family == "standard_bottle_cap":
+        if p["standard"] in ("iso_metric", "fdm_trapezoid_45"):
+            p.update(
+                nominal_dia=rng.choice([24.0, 28.0, 32.0, 40.0, 50.0]),
+                pitch=rng.choice([2.0, 2.5, 3.0]),
+                thread_length=rng.choice([8.0, 10.0, 12.0]),
+            )
+        # PCO/Mason nominal dimensions and all measured values remain intact.
+    elif family == "hose_vacuum_adapter":
+        p.update(
+            inlet_diameter=rng.choice([25.0, 32.0, 35.0, 40.0]),
+            outlet_diameter=rng.choice([32.0, 40.0, 50.0, 58.0]),
+            adapter_length=rng.choice([45.0, 60.0, 75.0, 90.0]),
+            end_length=rng.choice([10.0, 12.0, 15.0]),
+            end_a=rng.choice(["smooth", "barb", "male", "female"]),
+            end_b=rng.choice(["smooth", "barb", "male", "female"]),
+            pitch=rng.choice([2.0, 2.5, 3.0]),
+        )
+    else:
+        p.update(
+            nominal_dia=rng.choice([12.0, 16.0, 20.0, 24.0, 32.0]),
+            pitch=rng.choice([1.5, 2.0, 2.5]),
+            thread_length=rng.choice([15.0, 20.0, 25.0, 30.0]),
+            head=rng.choice(["hex", "knurled", "wing"]),
+            head_height=rng.choice([4.0, 5.0, 6.0]),
+            bore_diameter=0.0,
+            gasket=False,
+        )
+    p["measurements_confirmed"] = False
     return normalize_params(p)

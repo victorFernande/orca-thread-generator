@@ -5,6 +5,8 @@ import math
 from dataclasses import dataclass, asdict
 from typing import Any
 
+from .locale_catalog import normalize_language
+
 SCHEMA_VERSION = 1
 
 
@@ -87,6 +89,7 @@ def normalize_params(raw: dict[str, Any] | None = None) -> dict[str, Any]:
     p = dict(DEFAULT_PARAMS)
     if isinstance(raw, dict):
         p.update({k: v for k, v in raw.items() if k in p})
+    p["lang"] = normalize_language(p["lang"])
     choices = {
         "module": [
             "container_and_lid",
@@ -109,7 +112,6 @@ def normalize_params(raw: dict[str, Any] | None = None) -> dict[str, Any]:
         "end_b": ["smooth", "barb", "male", "female"],
         "part": ["cap", "neck"],
         "export_target": ["all", "primary", "secondary", "calibration"],
-        "lang": ["pt", "en"],
         "theme": ["dark", "light"],
     }
     for k, opts in choices.items():
@@ -170,7 +172,7 @@ def normalize_params(raw: dict[str, Any] | None = None) -> dict[str, Any]:
                 and p["measured_length"] >= 3
             ):
                 raise ValueError(
-                    "Mason 86: confirme diametro maior, raiz, passo e comprimento medidos / confirm measured major, root, pitch and length"
+                    "Mason 86: confirm measured major diameter, root diameter, pitch and length"
                 )
             p.update(
                 nominal_dia=p["measured_major_dia"],

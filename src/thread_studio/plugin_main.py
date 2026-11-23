@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .schema import DEFAULT_PARAMS, SCHEMA_VERSION, normalize_params
+from .locale_catalog import normalize_language
 from .thread_math import analyze_engagement, thread_radius
 from .mesh_generator import collect_target_meshes, generate_parts
 from .exporters import write_binary_stl, write_orca_3mf
@@ -932,22 +933,13 @@ def _bundle_get_value(bundle: Any, key: str) -> Any:
 
 
 def _detect_language(app_info: dict[str, Any]) -> str:
-    raw = str(app_info.get("language") or app_info.get("lang") or "").strip().lower()
-    if raw.startswith("en"):
-        return "en"
-    if raw.startswith("pt"):
-        return "pt"
+    raw = app_info.get("language") or app_info.get("lang")
     if raw:
-        return "en" if not raw.startswith("pt") else "pt"
+        return normalize_language(raw)
     try:
-        loc = (locale.getlocale()[0] or "").lower()
-        if loc.startswith("en"):
-            return "en"
-        if loc.startswith("pt"):
-            return "pt"
+        return normalize_language(locale.getlocale()[0])
     except Exception:
-        pass
-    return "pt"
+        return "pt"
 
 
 def _detect_theme(app_info: dict[str, Any]) -> str:
@@ -998,6 +990,9 @@ class ThreadStudioController:
         self._worker_lock = threading.Lock()
         self._last_geometry_worker = None
         self._preferences_initialized = False
+        self._client_requests = {}
+        self._language_requests = {}
+        self._language_revision = 0
 
     @property
     def current_params(self):
@@ -1201,6 +1196,12 @@ class ThreadStudioController:
     def build_initial_context(self, mode="page"):
         host = self.read_host_context()
         if not self._preferences_initialized:
+            try:
+                saved = json.loads((_resolve_storage_dir() / "ui_preferences.json").read_text(encoding="utf8"))
+                if isinstance(saved, dict) and isinstance(saved.get("lang"), str):
+                    host = dict(host, lang=normalize_language(saved["lang"]))
+            except (OSError, ValueError, UnicodeError):
+                pass
             self.set_current_params(
                 dict(self.current_params, lang=host["lang"], theme=host["theme"]),
                 history=False,
@@ -1252,21 +1253,56 @@ class ThreadStudioController:
             can_redo=bool(self._redo),
         )
 
-    def _queue_geometry(self):
+    def _reserve_client_request(self, message):
+        """Under _lock, reject late deliveries from the same optional client."""
+        client_id = message.get("client_id")
+        request_id = message.get("request_id")
+        if not isinstance(client_id, str) or not isinstance(request_id, int):
+            return True  # Existing clients do not need correlation metadata.
+        if request_id <= self._client_requests.get(client_id, -1):
+            return False
+        self._client_requests[client_id] = request_id
+        return True
+
+    def _commit_pending_edit(self, message):
+        """Commit the toolbar's unsent edit in the same history transaction."""
+        if "pending_params" not in message:
+            return
+        pending = message["pending_params"]
+        if not isinstance(pending, dict):
+            raise ValueError("pending_params must contain a parameter object")
+        self.set_current_params(dict(pending, lang=self.current_params["lang"]))
+
+    def _queue_geometry(self, request_id=None, client_id=None):
         with self._lock:
+            if isinstance(client_id, str) and isinstance(request_id, int):
+                if request_id < self._client_requests.get(client_id, -1):
+                    return
+                self._client_requests[client_id] = request_id
             self._revision += 1
             revision = self._revision
             p = self.current_params
+            # The acknowledgement belongs to this exact parameter snapshot.
+            acknowledgements = dict(self._client_requests)
         self._broadcast(dict(type="busy", busy=True))
 
         def generate():
             with self._worker_lock:
-                if revision != self._revision:
-                    return
+                with self._lock:
+                    if revision != self._revision:
+                        return
                 try:
                     result = self._geometry_message(p)
+                    with self._lock:
+                        result["params"]["lang"] = self._current_params["lang"]
+                    if request_id is not None:
+                        result["request_id"] = request_id
+                        result["client_id"] = client_id
+                    result["client_acknowledgements"] = acknowledgements
                 except Exception as exc:
-                    if revision == self._revision:
+                    with self._lock:
+                        latest = revision == self._revision
+                    if latest:
                         self._broadcast(
                             dict(
                                 type="action_result",
@@ -1277,7 +1313,9 @@ class ThreadStudioController:
                         )
                         self._broadcast(dict(type="busy", busy=False))
                     return
-                if revision == self._revision:
+                with self._lock:
+                    latest = revision == self._revision
+                if latest:
                     self._broadcast(result)
                     self._broadcast(dict(type="busy", busy=False))
 
@@ -1324,27 +1362,73 @@ class ThreadStudioController:
             if not isinstance(msg, dict):
                 raise ValueError("Expected message object")
             action = msg.get("type", "")
+            if action == "set_language":
+                language = normalize_language(msg.get("lang"))
+                client = msg.get("client_id")
+                request = msg.get("language_request_id")
+                with self._lock:
+                    if isinstance(client, str) and type(request) is int:
+                        if request <= self._language_requests.get(client, -1):
+                            return
+                        self._language_requests[client] = request
+                    self._current_params["lang"] = language
+                    self._preferences_initialized = True
+                    self._language_revision += 1
+                    revision = self._language_revision
+                    directory = _resolve_storage_dir()
+                    directory.mkdir(parents=True, exist_ok=True)
+                    path = directory / "ui_preferences.json"
+                    temp = directory / (".ui_preferences-" + uuid.uuid4().hex + ".tmp")
+                    try:
+                        temp.write_text(json.dumps({"lang": language}), encoding="utf8")
+                        os.replace(temp, path)
+                    finally:
+                        temp.unlink(missing_ok=True)
+                payload = dict(type="preferences_updated", lang=language,
+                               language_revision=revision, language_request_id=request, client_id=client)
+                self._broadcast(payload)
+                if send_fn not in self._listeners:
+                    send_fn(payload)
+                return
+            if action == "sync_printer":
+                # Host refresh must not reset a design or queue new geometry.
+                send_fn(dict(type="host_state", host=self.read_host_context()))
+                return
             if action == "ready":
                 if send_fn not in self._listeners:
                     self._listeners.append(send_fn)
                 send_fn(
-                    dict(type="init_state", **self.build_initial_context(default_mode))
+                    dict(
+                        type="init_state",
+                        request_id=msg.get("request_id"),
+                        client_id=msg.get("client_id"),
+                        **self.build_initial_context(default_mode),
+                    )
                 )
-                self._queue_geometry()
+                self._queue_geometry(msg.get("request_id"), msg.get("client_id"))
                 return
             if action in ("update", "analyze", "randomize", "reset"):
-                p = (
-                    DEFAULT_PARAMS
-                    if action == "reset"
-                    else msg.get("params", self.current_params)
-                )
-                if action == "randomize":
-                    p = generate_random_printable_params(msg.get("seed"), p)
-                self.set_current_params(p)
-                self._queue_geometry()
+                with self._lock:
+                    if not self._reserve_client_request(msg):
+                        return
+                    if action in ("randomize", "reset"):
+                        self._commit_pending_edit(msg)
+                    p = (
+                        DEFAULT_PARAMS
+                        if action == "reset"
+                        else msg.get("params", self.current_params)
+                    )
+                    if action == "randomize":
+                        p = generate_random_printable_params(msg.get("seed"), p)
+                    p = dict(p, lang=self._current_params["lang"])
+                    self.set_current_params(p)
+                self._queue_geometry(msg.get("request_id"), msg.get("client_id"))
                 return
             if action in ("undo", "redo"):
                 with self._lock:
+                    if not self._reserve_client_request(msg):
+                        return
+                    self._commit_pending_edit(msg)
                     source, target = (
                         (self._undo, self._redo)
                         if action == "undo"
@@ -1352,8 +1436,9 @@ class ThreadStudioController:
                     )
                     if source:
                         target.append(self._current_params)
-                        self._current_params = source.pop()
-                self._queue_geometry()
+                        language = self._current_params["lang"]
+                        self._current_params = dict(source.pop(), lang=language)
+                self._queue_geometry(msg.get("request_id"), msg.get("client_id"))
                 return
             if action == "preset_save":
                 data = save_user_preset(
@@ -1369,7 +1454,8 @@ class ThreadStudioController:
                 self._broadcast(dict(type="presets_updated", user_presets=data))
                 return
             if action in ("export_file", "send_to_plater"):
-                p = self.set_current_params(msg.get("params", self.current_params))
+                with self._lock:
+                    p = self.set_current_params(dict(msg.get("params", self.current_params), lang=self._current_params["lang"]))
                 fmt = msg.get("format", "3mf")
                 send_fn(
                     dict(
@@ -1377,7 +1463,7 @@ class ThreadStudioController:
                         ok=None,
                         action=action,
                         paths=[],
-                        message="Preparando malha / Preparing mesh",
+                        message="Preparing mesh…",
                     )
                 )
 
@@ -1390,7 +1476,7 @@ class ThreadStudioController:
                                 ok=True,
                                 action=action,
                                 paths=paths,
-                                message="Exportado / Exported",
+                                message="Files exported.",
                             )
                         else:
                             ok, detail, hwnd = _dispatch_files_to_plater(paths)
@@ -1399,12 +1485,8 @@ class ThreadStudioController:
                                 ok=ok,
                                 action=action,
                                 paths=paths,
-                                message=(
-                                    "Pedido de importacao enviado; carregamento nao confirmado / Import request sent; loading not confirmed. "
-                                    if ok
-                                    else "Falha de envio / Transport failed. "
-                                )
-                                + detail,
+                                message=("Import request sent; loading not confirmed." if ok else "Transport failed."),
+                                detail=detail,
                             )
                     except Exception as exc:
                         result = dict(
@@ -1429,7 +1511,7 @@ class ThreadStudioController:
                         type="action_result",
                         ok=ok,
                         paths=[str(self.get_export_dir())],
-                        message="Pasta de exportacoes / Export folder",
+                        message="Open export folder",
                     )
                 )
                 return

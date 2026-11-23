@@ -1,5 +1,11 @@
 # Manual — Orca Thread Studio
 
+## Instalação e interface
+
+Após instalar ou atualizar, feche e reabra o OrcaSlicer. Confira a versão e ative **Orca Thread Studio** no gerenciador de plugins.
+
+O template segue o Orca Vase Studio: nome e impressora no cabeçalho, ações compactas, galeria de cartões com filtros, parâmetros com sliders e campos numéricos, cartões de recursos e rodapé fixo de exportação. Clique na identificação da impressora para sincronizar seus dados. Trocar o material visual não seleciona um filamento de impressão.
+
 ## Primeiro projeto
 
 1. Abra a aba **Thread Studio**, ou o script **Orca Thread Studio — Painel Lateral**.
@@ -23,7 +29,7 @@
 
 Arraste a prévia para orbitar e use a roda para aproximar. **Enquadrar** restaura a câmera. **Corte axial** revela a parede e os filetes. **Abertura** controla a separação da tampa; **Rosquear** anima rotação com translação compatível com o avanço da rosca. A lupa acompanha o deslocamento e indica interferência analítica ou ausência de engate; ela não simula deformação do plástico.
 
-O modo lateral usa as abas Parâmetros, Visualização e Exportação. O estado e os presets são compartilhados com a aba principal enquanto o plugin está carregado. Desfazer/refazer funciona entre as duas superfícies, e **Resetar** retorna aos parâmetros iniciais. O botão PT/EN troca o idioma e o botão de tema alterna claro/escuro.
+O modo lateral usa as abas **Forma, Recursos, Impressão e Presets**, com prévia compacta no topo e exportação acessível no rodapé. O estado e os presets são compartilhados com a aba principal enquanto o plugin está carregado. Desfazer/refazer funciona entre as duas superfícies, e **Restaurar** retorna aos parâmetros iniciais. O seletor de idioma oferece sete idiomas offline e o botão de tema alterna claro/escuro. **Surpreenda-me** gera uma configuração validada da família atual; ele não confirma medidas experimentais nem libera Mason 86 automaticamente.
 
 ## Exportação
 
@@ -32,3 +38,7 @@ Escolha conjunto, peça principal, secundária ou calibrador. STL exporta uma ma
 **Enviar para a mesa** prepara o arquivo e aguarda a resposta do transporte nativo. “Pedido enviado” significa que a solicitação foi transmitida; confirme a presença das peças no OrcaSlicer. Em falha de integração, use **Abrir pasta de exportações** e importe o arquivo manualmente. Os arquivos e presets permanecem no armazenamento local do plugin.
 
 As estimativas de minutos do planejamento original dependem do perfil real de fatiamento e não são prazos garantidos. Calibre contra a peça física antes de confiar no encaixe.
+
+## Idioma
+
+Selecione Português, English, Español, Italiano, Français, Deutsch ou 日本語 no cabeçalho. A escolha vale para aba e painel lateral, é lembrada ao reabrir e não recalcula a malha. Avisos conhecidos e nomes dos modelos internos acompanham o idioma. Nomes pessoais e caminhos permanecem como digitados. Novos idiomas usam [pacotes JSON](LANGUAGE_PACKS.md).
