@@ -998,6 +998,7 @@ class ThreadStudioController:
         self._worker_lock = threading.Lock()
         self._last_geometry_worker = None
         self._preferences_initialized = False
+        self._client_requests = {}
 
     @property
     def current_params(self):
@@ -1252,21 +1253,54 @@ class ThreadStudioController:
             can_redo=bool(self._redo),
         )
 
-    def _queue_geometry(self):
+    def _reserve_client_request(self, message):
+        """Under _lock, reject late deliveries from the same optional client."""
+        client_id = message.get("client_id")
+        request_id = message.get("request_id")
+        if not isinstance(client_id, str) or not isinstance(request_id, int):
+            return True  # Existing clients do not need correlation metadata.
+        if request_id <= self._client_requests.get(client_id, -1):
+            return False
+        self._client_requests[client_id] = request_id
+        return True
+
+    def _commit_pending_edit(self, message):
+        """Commit the toolbar's unsent edit in the same history transaction."""
+        if "pending_params" not in message:
+            return
+        pending = message["pending_params"]
+        if not isinstance(pending, dict):
+            raise ValueError("pending_params must contain a parameter object")
+        self.set_current_params(pending)
+
+    def _queue_geometry(self, request_id=None, client_id=None):
         with self._lock:
+            if isinstance(client_id, str) and isinstance(request_id, int):
+                if request_id < self._client_requests.get(client_id, -1):
+                    return
+                self._client_requests[client_id] = request_id
             self._revision += 1
             revision = self._revision
             p = self.current_params
+            # The acknowledgement belongs to this exact parameter snapshot.
+            acknowledgements = dict(self._client_requests)
         self._broadcast(dict(type="busy", busy=True))
 
         def generate():
             with self._worker_lock:
-                if revision != self._revision:
-                    return
+                with self._lock:
+                    if revision != self._revision:
+                        return
                 try:
                     result = self._geometry_message(p)
+                    if request_id is not None:
+                        result["request_id"] = request_id
+                        result["client_id"] = client_id
+                    result["client_acknowledgements"] = acknowledgements
                 except Exception as exc:
-                    if revision == self._revision:
+                    with self._lock:
+                        latest = revision == self._revision
+                    if latest:
                         self._broadcast(
                             dict(
                                 type="action_result",
@@ -1277,7 +1311,9 @@ class ThreadStudioController:
                         )
                         self._broadcast(dict(type="busy", busy=False))
                     return
-                if revision == self._revision:
+                with self._lock:
+                    latest = revision == self._revision
+                if latest:
                     self._broadcast(result)
                     self._broadcast(dict(type="busy", busy=False))
 
@@ -1324,27 +1360,44 @@ class ThreadStudioController:
             if not isinstance(msg, dict):
                 raise ValueError("Expected message object")
             action = msg.get("type", "")
+            if action == "sync_printer":
+                # Host refresh must not reset a design or queue new geometry.
+                send_fn(dict(type="host_state", host=self.read_host_context()))
+                return
             if action == "ready":
                 if send_fn not in self._listeners:
                     self._listeners.append(send_fn)
                 send_fn(
-                    dict(type="init_state", **self.build_initial_context(default_mode))
+                    dict(
+                        type="init_state",
+                        request_id=msg.get("request_id"),
+                        client_id=msg.get("client_id"),
+                        **self.build_initial_context(default_mode),
+                    )
                 )
-                self._queue_geometry()
+                self._queue_geometry(msg.get("request_id"), msg.get("client_id"))
                 return
             if action in ("update", "analyze", "randomize", "reset"):
-                p = (
-                    DEFAULT_PARAMS
-                    if action == "reset"
-                    else msg.get("params", self.current_params)
-                )
-                if action == "randomize":
-                    p = generate_random_printable_params(msg.get("seed"), p)
-                self.set_current_params(p)
-                self._queue_geometry()
+                with self._lock:
+                    if not self._reserve_client_request(msg):
+                        return
+                    if action in ("randomize", "reset"):
+                        self._commit_pending_edit(msg)
+                    p = (
+                        DEFAULT_PARAMS
+                        if action == "reset"
+                        else msg.get("params", self.current_params)
+                    )
+                    if action == "randomize":
+                        p = generate_random_printable_params(msg.get("seed"), p)
+                    self.set_current_params(p)
+                self._queue_geometry(msg.get("request_id"), msg.get("client_id"))
                 return
             if action in ("undo", "redo"):
                 with self._lock:
+                    if not self._reserve_client_request(msg):
+                        return
+                    self._commit_pending_edit(msg)
                     source, target = (
                         (self._undo, self._redo)
                         if action == "undo"
@@ -1353,7 +1406,7 @@ class ThreadStudioController:
                     if source:
                         target.append(self._current_params)
                         self._current_params = source.pop()
-                self._queue_geometry()
+                self._queue_geometry(msg.get("request_id"), msg.get("client_id"))
                 return
             if action == "preset_save":
                 data = save_user_preset(

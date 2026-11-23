@@ -1,5 +1,11 @@
 # Manual — Orca Thread Studio
 
+## Instalação e interface
+
+Após instalar ou atualizar, feche e reabra o OrcaSlicer. Confira a versão e ative **Orca Thread Studio** no gerenciador de plugins.
+
+O template segue o Orca Vase Studio: nome e impressora no cabeçalho, ações compactas, galeria de cartões com filtros, parâmetros com sliders e campos numéricos, cartões de recursos e rodapé fixo de exportação. Clique na identificação da impressora para sincronizar seus dados. Trocar o material visual não seleciona um filamento de impressão.
+
 ## Primeiro projeto
 
 1. Abra a aba **Thread Studio**, ou o script **Orca Thread Studio — Painel Lateral**.
@@ -23,7 +29,7 @@
 
 Arraste a prévia para orbitar e use a roda para aproximar. **Enquadrar** restaura a câmera. **Corte axial** revela a parede e os filetes. **Abertura** controla a separação da tampa; **Rosquear** anima rotação com translação compatível com o avanço da rosca. A lupa acompanha o deslocamento e indica interferência analítica ou ausência de engate; ela não simula deformação do plástico.
 
-O modo lateral usa as abas Parâmetros, Visualização e Exportação. O estado e os presets são compartilhados com a aba principal enquanto o plugin está carregado. Desfazer/refazer funciona entre as duas superfícies, e **Resetar** retorna aos parâmetros iniciais. O botão PT/EN troca o idioma e o botão de tema alterna claro/escuro.
+O modo lateral usa as abas **Forma, Recursos, Impressão e Presets**, com prévia compacta no topo e exportação acessível no rodapé. O estado e os presets são compartilhados com a aba principal enquanto o plugin está carregado. Desfazer/refazer funciona entre as duas superfícies, e **Restaurar** retorna aos parâmetros iniciais. O botão PT/EN troca o idioma e o botão de tema alterna claro/escuro. **Surpreenda-me** gera uma configuração validada da família atual; ele não confirma medidas experimentais nem libera Mason 86 automaticamente.
 
 ## Exportação
 

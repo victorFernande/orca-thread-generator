@@ -1,5 +1,17 @@
 # Validation status
 
+## Version 1.1.0 verification — 2026-11-18
+
+A native session in **OrcaSlicer 2.5.1 on Windows** opened the Box and Thread studio pages, generated their real geometry, exported 3MF files and sent import requests through WM_COPYDATA. The base and lid from each plugin were then visually confirmed on the Plater. This observation goes beyond the transport acknowledgement; the plugin's status message itself still reports only that an import request was sent.
+
+The native session used version 1.1.0 **before the final native-theme adapters**. The final adapters and final dock layout have not yet been verified inside OrcaSlicer. Live integration inside macOS and Linux remains pending. No slicing, physical printing, mating-fit, strength or sealing validation was performed.
+
+During the shared session, the Thread 3MF was imported as geometry into a project already containing Box objects, and the objects overlapped. Open the exported 3MF as a project, or use an empty plate; when adding it to an existing plate, arrange the objects before slicing.
+
+The final local version 1.1.0 suite passed all **68** unittest cases. Browser/template and simulated host checks are separate evidence from the native session above; they do not establish physical performance or native compatibility on other operating systems. The earlier results below remain historical records.
+
+## Version 1.0.0 historical baseline
+
 Recorded on 2026-11-18 for version 1.0.0.
 
 ## Verified locally
@@ -12,7 +24,7 @@ Recorded on 2026-11-18 for version 1.0.0.
 - Generated JavaScript passes Node.js syntax checking. Chromium browser rendering with a local test bridge verifies the default geometry, English/Portuguese interface, theme changes, representative presets, multistart lead, undo/redo, calibration parts, 3MF export and compact dock rendering.
 - The Linux transport has isolated tests for unique-owner routing, wrong process identity, send failure, disconnection and resource cleanup. These are simulated transport checks rather than a live Linux OrcaSlicer session.
 
-## Pending validation
+## Pending validation recorded for version 1.0.0
 
 - Live native page/dock activation, permission handling and Plater delivery inside OrcaSlicer on all three operating systems.
 - Real printed thread engagement, printer/material calibration, insert or external hardware compatibility, sealing and mechanical behavior.

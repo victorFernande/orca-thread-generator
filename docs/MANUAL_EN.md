@@ -1,5 +1,11 @@
 # Orca Thread Studio — user manual
 
+## Installation and interface
+
+After installing or updating, close and reopen OrcaSlicer. Check the version and enable **Orca Thread Studio** in the plugin manager. The Vase Studio template provides the compact header, editable design name, printer synchronization, filtered card gallery, paired sliders/numeric inputs, feature cards and fixed export footer.
+
+The dock uses **Shape, Features, Print and Presets**, with a compact preview above the controls. Visual materials do not select a slicer filament. **Surprise Me** generates validated settings in the current family and never confirms experimental measurements or automatically unlocks Mason 86.
+
 ## First model
 
 Open **Thread Studio** or the **Orca Thread Studio — Painel Lateral** script. Choose a library project, then edit nominal diameter, axial pitch, threaded length, handedness and starts. Lead is pitch × starts. Diametral clearance is the total diameter difference; radial clearance is half of it.
@@ -20,7 +26,7 @@ Before a full print, select **3 calibration rings**. One, two or three physical 
 
 Drag to orbit, wheel to zoom and use **Fit view** to reset the camera. Axial section reveals the internal thread. Opening separates the mating parts. Screw motion combines rotation and axial travel using the actual lead. The 2D loupe follows the position, marking analytical interference or no engagement; it does not simulate plastic deformation, friction or stress.
 
-The dock offers Parameters, Preview and Export tabs. Page and dock share the same loaded controller, user presets and undo/redo history. Reset restores the initial parameters. PT/EN changes language and the theme button toggles light/dark.
+The dock offers Shape, Features, Print and Presets tabs, keeping the compact preview and export footer visible. Page and dock share the same loaded controller, user presets and undo/redo history. Reset restores the initial parameters. PT/EN changes language and the theme button toggles light/dark.
 
 Select all parts, primary, secondary or calibration. STL writes individual part files; 3MF retains multiple objects and optional mechanical slicing defaults. Original-scale packing rejects a bed that is too small. Export parts separately or choose a larger printer.
 

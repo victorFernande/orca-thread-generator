@@ -4,7 +4,7 @@ Offline parametric thread, bottle and adapter generator for **OrcaSlicer 2.5.1+*
 
 ![Studio icon](assets/icon.svg)
 
-English and Brazilian Portuguese interface, a full studio tab and a compact dock, with the same grey and teal visual family as Orca Gear Studio and Orca Vase Studio.
+English and Brazilian Portuguese interface, a full studio tab and a compact dock. Version 1.1 adopts the **Orca Vase Studio template**: compact header, filtered preset gallery, parameter cards, paired sliders/numeric fields, floating inspection tools and a fixed export footer. See [template provenance](docs/UI_TEMPLATE.md).
 
 ## Features
 
@@ -28,9 +28,11 @@ Use `dist/orca_thread_generator.py` as the single-file native plugin. Install it
 
 The installer writes only this plugin's directory, `orca_plugins/orca_thread_generator`, under the OrcaSlicer user data directory. It does not change sibling plugins. The SVG icon is embedded and can materialize automatically if only the Python bundle is installed. A universal `_any.py` bundle and a pure Python wheel are also included. No marketplace submission is performed.
 
+After installing or updating, **close and reopen OrcaSlicer** to load the new bundle. In **Plugins**, check the version and enable **Orca Thread Studio**. Replacing the file while OrcaSlicer is running does not reload the plugin already held in memory.
+
 ## Develop and verify
 
-Automated geometry, bridge and package checks and browser rendering have been verified. Live page/dock activation and Plater delivery inside OrcaSlicer remain pending on Windows, macOS and Linux; installing the files does not establish those results. See [validation status](docs/VALIDATION.md).
+All 68 local version 1.1.0 tests passed. In OrcaSlicer 2.5.1 on Windows, a native session using the 1.1.0 interface before the final theme adapters confirmed page activation, real geometry generation, 3MF export, WM_COPYDATA delivery and the container base/lid visibly loaded on the Plater. The final dock and final theme adapters still need native verification; live macOS/Linux integration also remains pending. No slicing, printing or physical fit test was performed. See [validation status](docs/VALIDATION.md).
 
 Python >=3.12 and NumPy >=1.26 are required. Runtime generation is offline. The OrcaSlicer shared Python package directory is discovered if NumPy is not on the standard import path.
 
@@ -39,7 +41,7 @@ Python >=3.12 and NumPy >=1.26 are required. Runtime generation is offline. The 
 & 'C:\Program Files\OrcaSlicer\python\python.exe' -B -W error -m unittest discover -s tests -v
 ```
 
-The tests cover closed oriented topology, nondegenerate faces, genus, actual mating mesh cross sections, all adapter end combinations, calibration markings, profile math, asynchronous delivery status, preset persistence, JavaScript syntax and standalone bundle/wheel loading. Node.js adds the JavaScript syntax check when available. CI exercises Windows, macOS and Linux; native host integration on each system still requires a real OrcaSlicer session.
+The tests cover closed oriented topology, nondegenerate faces, genus, actual mating mesh cross sections, all adapter end combinations, calibration markings, profile math, asynchronous delivery status, preset persistence, JavaScript syntax and standalone bundle/wheel loading. Node.js adds the JavaScript syntax check when available. CI exercises Windows, macOS and Linux; its simulated host checks complement the limited Windows native evidence recorded above. Live macOS/Linux integration and final Windows dock/theme checks remain pending.
 
 ## Important engineering limits
 
@@ -58,6 +60,8 @@ The loupe reports analytical radial/flank clearance at the displayed screw posit
 STL and 3MF files are saved to the plugin's local storage, not into this repository. 3MF uses five walls, five top/bottom layers, 30% gyroid infill and a pitch-dependent fine layer height when automatic slicing defaults are enabled. The current printer's process snapshot and bed are included when available. Oversize layouts are rejected without scaling the model.
 
 Windows sends to the active process's Plater through WM_COPYDATA. macOS schedules Cocoa file opening on the main queue. Linux uses the current process's D-Bus instance service and a unique-owner check, without shell commands. A completed transport is reported as **request sent**, never as proof that object loading finished. Failure keeps the exported file available for manual import.
+
+Open the exported 3MF as a project, or use an empty plate. If importing it as geometry into an existing project, arrange the objects before slicing. In the Windows validation session, importing Thread geometry into a project already containing Box objects caused overlap; import delivery does not arrange pre-existing objects.
 
 ## Public repository hygiene
 
