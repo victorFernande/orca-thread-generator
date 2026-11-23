@@ -7,6 +7,8 @@ under MIT; models displayed here are the native Thread Studio mesh arrays.
 from __future__ import annotations
 import copy
 import json
+from html import escape
+from .locale_catalog import LANGUAGE_METADATA, TRANSLATIONS, normalize_language
 from .schema import DEFAULT_PARAMS, normalize_params
 from .presets_catalog import BUILTIN_PRESETS
 
@@ -17,11 +19,9 @@ def get_studio_html(mode="page", initial_context=None):
     context.setdefault("builtin_presets", BUILTIN_PRESETS)
     context.setdefault("user_presets", [])
     context["mode"] = "dock" if mode == "dock" else "page"
-    context["lang"] = (
-        "en"
-        if str(context.get("lang", context["params"]["lang"])).startswith("en")
-        else "pt"
-    )
+    context["lang"] = normalize_language(context.get("lang", context["params"]["lang"]))
+    context["languages"] = LANGUAGE_METADATA
+    context["translations"] = TRANSLATIONS
     context["theme"] = (
         "light"
         if context.get("theme", context["params"]["theme"]) == "light"
@@ -37,6 +37,9 @@ def get_studio_html(mode="page", initial_context=None):
     )
     return (
         _HTML.replace("__THREAD_BOOT_JSON__", payload)
+        .replace("__THREAD_LANGUAGE_OPTIONS__", "".join(
+            f'<option value="{escape(m["code"], quote=True)}">{escape(m["native_name"])}</option>'
+            for m in LANGUAGE_METADATA))
         .replace("__INITIAL_LANG__", context["lang"])
         .replace("__INITIAL_THEME__", context["theme"])
         .replace("__INITIAL_MODE__", context["mode"])
@@ -1446,10 +1449,10 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
       <div class="brand-titles">
         <div class="brand-name-row">
           <span class="brand-title">Orca Thread Studio</span>
-          <input id="inp-design-name" class="design-name-input" type="text" maxlength="80" value="Orca Thread" aria-label="Design Name" />
+          <input id="inp-design-name" class="design-name-input" type="text" maxlength="80" value="Orca Thread" aria-label="Design Name" data-locale-aria="Design Name" />
         </div>
       </div>
-      <button id="printer-pill" type="button" class="printer-pill" title="Clique para sincronizar impressora ativa do OrcaSlicer">
+      <button id="printer-pill" type="button" class="printer-pill" title="Clique para sincronizar impressora ativa do OrcaSlicer" data-locale-title="Sync active printer">
         <span class="printer-dot"></span>
         <span id="printer-pill-text" class="printer-pill-text">
           <span id="printer-pill-name" class="printer-pill-name">Generic 3D Printer</span>
@@ -1460,20 +1463,20 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
     </div>
 
     <div class="header-actions">
-      <button id="undo" class="btn btn-icon" title="Undo (Ctrl+Z)" disabled>↶</button>
-      <button id="redo" class="btn btn-icon" title="Redo (Ctrl+Y)" disabled>↷</button>
+      <button id="undo" class="btn btn-icon" title="Undo (Ctrl+Z)" data-locale-title="Undo" disabled>↶</button>
+      <button id="redo" class="btn btn-icon" title="Redo (Ctrl+Y)" data-locale-title="Redo" disabled>↷</button>
       <button id="randomize" class="btn btn-soft">
         <span>🎲</span>
         <span data-i18n="btn_surprise">Surpreenda-me</span>
       </button>
-      <button id="reset" class="btn btn-icon" title="Reset">↺</button>
-      <button id="language" class="btn btn-icon" title="Português / English">PT</button>
-      <button id="theme" class="btn btn-icon" title="Dark / Light">☾</button>
+      <button id="reset" class="btn btn-icon" title="Reset" data-locale-title="Reset">↺</button>
+      <select id="language" class="btn" style="width:auto;padding:4px 5px" aria-label="Language" data-locale-aria="Language">__THREAD_LANGUAGE_OPTIONS__</select>
+      <button id="theme" class="btn btn-icon" title="Dark / Light" data-locale-title="Theme">☾</button>
     </div>
   </header>
 
   <!-- DOCK MODE TABS -->
-  <nav class="dock-tabs" aria-label="Studio Sections">
+  <nav class="dock-tabs" aria-label="Studio Sections" data-locale-aria="Studio Sections">
     <button class="dock-tab-btn active" data-tab="shape" data-i18n="tab_shape">Forma</button>
     <button class="dock-tab-btn" data-tab="textures" data-i18n="tab_textures">Recursos</button>
     <button class="dock-tab-btn" data-tab="print" data-i18n="tab_print">Impressão</button>
@@ -1486,7 +1489,7 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
 
       <!-- Top-Left Material & View Controls -->
       <div class="vp-toolbar-left">
-        <select id="sel-material" class="vp-select" aria-label="Material">
+        <select id="sel-material" class="vp-select" aria-label="Material" data-locale-aria="Material">
           <option value="emerald_silk" data-i18n="mat_emerald">Seda Esmeralda Orca</option>
           <option value="terracotta" data-i18n="mat_terracotta">Cerâmica Terracota</option>
           <option value="matte_ceramic" data-i18n="mat_white">Porcelana Branca Mate</option>
@@ -1498,7 +1501,7 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
         <button id="btn-vp-calipers" class="vp-chip" data-i18n="vp_calipers">📏 Cotas mm</button>
         <button id="btn-vp-heatmap" class="vp-chip" data-i18n="vp_heatmap">🔥 Overhang</button>
         <button id="btn-vp-wire" class="vp-chip" data-i18n="vp_wire">⌗ Malha</button>
-        <button id="btn-vp-spin" class="vp-chip" title="Auto-Rotate">⟳</button>
+        <button id="btn-vp-spin" class="vp-chip" title="Auto-Rotate" data-locale-title="Auto-Rotate">⟳</button>
       </div>
 
       <!-- Out-of-bed live warning -->
@@ -1551,7 +1554,7 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
         <div id="hud-warnings" class="hud-warnings"></div>
       </aside>
 
-      <div class="thread-assembly-bar vp-glass"><button id="animate" class="vp-chip" data-i18n="animate">Rosquear</button><span class="ctrl-label" data-i18n="explode">Abertura</span><input id="explode" class="orca-slider" aria-label="Opening" type="range" min="0" max="40" step=".5" value="8"><span id="opening-mm" class="ctrl-unit">8 mm</span></div>
+      <div class="thread-assembly-bar vp-glass"><button id="animate" class="vp-chip" data-i18n="animate">Rosquear</button><span class="ctrl-label" data-i18n="explode">Abertura</span><input id="explode" class="orca-slider" aria-label="Opening" data-locale-aria="Opening" type="range" min="0" max="40" step=".5" value="8"><span id="opening-mm" class="ctrl-unit">8 mm</span></div>
       <!-- Camera Preset Pills -->
       <div class="vp-cam-bar">
         <button class="vp-chip" data-cam="iso">Iso</button>
@@ -1563,7 +1566,7 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
 
       <!-- Bottom Dual Section Inspector Slider (Vertical Profile Y + Horizontal Plan Slice Z) -->
       <div class="vp-cut-bar vp-glass">
-        <div class="vp-cut-modes" role="group" aria-label="Section Cut Mode">
+        <div class="vp-cut-modes" role="group" aria-label="Section Cut Mode" data-locale-aria="Section Cut Mode">
           <button id="cut" class="vp-cut-mode-btn active" data-i18n="vp_cut_y">✂ Corte Vertical (Perfil Y)</button>
           <button id="btn-cut-mode-z" class="vp-cut-mode-btn" data-i18n="vp_cut_z">💿 Fatia Horizontal Z (Planta 5%–100%)</button>
         </div>
@@ -1572,10 +1575,10 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
         <button id="btn-cut-half" class="btn" style="padding:3px 7px;font-size:10.5px;">50%</button>
         <button id="btn-cut-off" class="btn" style="padding:3px 7px;font-size:10.5px;">Off</button>
       </div>
-      <div class="thread-loupe"><div class="card-head"><span class="card-title" data-i18n="loupe">Lupa de flancos · seção axial</span><span id="engagement-readout" class="card-badge">—</span></div><canvas id="thread-loupe" aria-label="Thread engagement section"></canvas><div class="thread-loupe-legend"><span><i class="thread-key male"></i><span data-i18n="male">Macho</span></span><span><i class="thread-key female"></i><span data-i18n="female">Fêmea</span></span><span id="clearance-readout"></span></div></div>
+      <div class="thread-loupe"><div class="card-head"><span class="card-title" data-i18n="loupe">Lupa de flancos · seção axial</span><span id="engagement-readout" class="card-badge">—</span></div><canvas id="thread-loupe" aria-label="Thread engagement section" data-locale-aria="Thread engagement section"></canvas><div class="thread-loupe-legend"><span><i class="thread-key male"></i><span data-i18n="male">Macho</span></span><span><i class="thread-key female"></i><span data-i18n="female">Fêmea</span></span><span id="clearance-readout"></span></div></div>
     </section>
 
-<section class="col-panel col-right"><div class="col-scroll"><div id="card-print-mode" class="studio-card" data-thread-print style="border-color:var(--orca-accent-border)"><div class="card-head"><span class="card-title" data-i18n="sec_fit">Encaixe & paredes</span><span id="fit-badge" class="card-badge">cᵣ 0.13 mm</span></div><div id="fields-fit"></div><div class="thread-dimension-grid"><div class="helper-note"><span data-i18n="lead">Avanço por volta</span><div id="lead" class="thread-stat">—</div></div><div class="helper-note"><span data-i18n="radial">Folga radial nominal</span><div id="radial" class="thread-stat">—</div></div></div><div id="warning" class="helper-note warn" hidden></div><p class="thread-context-note" data-i18n="physical">Imprima o calibrador antes da peça final.</p></div><div id="card-thread-options" class="studio-card" data-thread-resource><div class="card-head"><span class="card-title" data-i18n="sec_helix">Entradas & Higbee</span></div><div id="fields-helix"></div></div><div id="card-textures" class="studio-card" data-thread-resource><div class="card-head"><span class="card-title" data-i18n="sec_surface">Superfície</span></div><div id="fields-surface"></div></div><div id="card-envelope" class="studio-card" data-thread-resource><div class="card-head"><span class="card-title" data-i18n="sec_connections">Conexões</span></div><div id="fields-connections"></div></div><div id="card-gardening" class="studio-card" data-thread-print><div class="card-head"><span class="card-title" data-i18n="sec_gasket">Canal de vedação</span></div><div id="fields-gasket"></div></div><div id="card-print-settings" class="studio-card" data-thread-print><div class="card-head"><span class="card-title" data-i18n="sec_output">Impressão & exportação</span></div><label class="ctrl-row"><span class="ctrl-label" data-i18n="target">Peças</span><select id="target" class="vp-select thread-select"></select></label><div id="fields-print"></div><p class="helper-note" data-i18n="settings">5 paredes e camada fina para roscas.</p><div id="status" class="helper-note thread-status" role="status" aria-live="polite"></div></div><div class="studio-card thread-loupe-dock" data-thread-resource><div class="card-head"><span class="card-title" data-i18n="loupe">Lupa de flancos</span></div><canvas id="thread-loupe-dock" aria-label="Thread engagement section"></canvas><span id="dock-engagement" class="thread-context-note"></span></div></div>      <footer class="action-footer">
+<section class="col-panel col-right"><div class="col-scroll"><div id="card-print-mode" class="studio-card" data-thread-print style="border-color:var(--orca-accent-border)"><div class="card-head"><span class="card-title" data-i18n="sec_fit">Encaixe & paredes</span><span id="fit-badge" class="card-badge">cᵣ 0.13 mm</span></div><div id="fields-fit"></div><div class="thread-dimension-grid"><div class="helper-note"><span data-i18n="lead">Avanço por volta</span><div id="lead" class="thread-stat">—</div></div><div class="helper-note"><span data-i18n="radial">Folga radial nominal</span><div id="radial" class="thread-stat">—</div></div></div><div id="warning" class="helper-note warn" hidden></div><p class="thread-context-note" data-i18n="physical">Imprima o calibrador antes da peça final.</p></div><div id="card-thread-options" class="studio-card" data-thread-resource><div class="card-head"><span class="card-title" data-i18n="sec_helix">Entradas & Higbee</span></div><div id="fields-helix"></div></div><div id="card-textures" class="studio-card" data-thread-resource><div class="card-head"><span class="card-title" data-i18n="sec_surface">Superfície</span></div><div id="fields-surface"></div></div><div id="card-envelope" class="studio-card" data-thread-resource><div class="card-head"><span class="card-title" data-i18n="sec_connections">Conexões</span></div><div id="fields-connections"></div></div><div id="card-gardening" class="studio-card" data-thread-print><div class="card-head"><span class="card-title" data-i18n="sec_gasket">Canal de vedação</span></div><div id="fields-gasket"></div></div><div id="card-print-settings" class="studio-card" data-thread-print><div class="card-head"><span class="card-title" data-i18n="sec_output">Impressão & exportação</span></div><label class="ctrl-row"><span class="ctrl-label" data-i18n="target">Peças</span><select id="target" class="vp-select thread-select"></select></label><div id="fields-print"></div><p class="helper-note" data-i18n="settings">5 paredes e camada fina para roscas.</p><div id="status" class="helper-note thread-status" role="status" aria-live="polite"></div></div><div class="studio-card thread-loupe-dock" data-thread-resource><div class="card-head"><span class="card-title" data-i18n="loupe">Lupa de flancos</span></div><canvas id="thread-loupe-dock" aria-label="Thread engagement section" data-locale-aria="Thread engagement section"></canvas><span id="dock-engagement" class="thread-context-note"></span></div></div>      <footer class="action-footer">
         <button class="btn-hero" id="send" data-action="send_to_plater">
           <span>🚀</span>
           <span data-i18n="btn_send_plater">Enviar para a Mesa do OrcaSlicer</span>
@@ -1583,7 +1586,7 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
         <div class="export-btn-row">
           <button class="btn" id="three" data-action="export_3mf">💾 <span data-i18n="btn_exp_3mf">Exportar .3MF</span></button>
           <button class="btn" id="stl" data-action="export_stl">📐 <span data-i18n="btn_exp_stl">Exportar .STL</span></button>
-          <button class="btn btn-icon" id="folder" data-action="open_folder" title="Open Exports Folder">📂</button>
+          <button class="btn btn-icon" id="folder" data-action="open_folder" title="Open Exports Folder" data-locale-title="Open export folder">📂</button>
         </div>
       </footer></section></main>  <footer class="action-footer dock-global-footer">
     <button class="btn-hero" data-action="send_to_plater" style="padding:8px 10px;font-size:12px;">
@@ -1593,7 +1596,7 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
     <div class="export-btn-row">
       <button class="btn" data-action="export_3mf">💾 .3MF</button>
       <button class="btn" data-action="export_stl">📐 .STL</button>
-      <button class="btn btn-icon" data-action="open_folder" title="Open Exports Folder">📂</button>
+      <button class="btn btn-icon" data-action="open_folder" title="Open Exports Folder" data-locale-title="Open export folder">📂</button>
     </div>
   </footer></div><div id="toast-banner" class="toast-banner" role="status" aria-live="polite"></div><script>
 (function () {
@@ -1610,9 +1613,13 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
     builtins = BOOT_PAYLOAD.builtin_presets || [],
     presetFilter = "all",
     activePreset = "",
-    updateTimer = null;
+    updateTimer = null,
+    currentWarning = "",
+    lastStatus = null;
   let editRevision = 0,
     acknowledgedRevision = 0,
+    languageRequest = 0,
+    languageRevision = 0,
     userOverrodeTheme = false;
   const clientId = "thread-" + Math.random().toString(36).slice(2);
   const view = {
@@ -1955,8 +1962,19 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
     measured_pitch: [0, 10, 0.05],
     measured_length: [0, 40, 0.1],
   });
+  function normalizeLanguage(value) {
+    let code = String(value || "en").trim().toLowerCase().replaceAll("_", "-").split(/[.@]/)[0];
+    while (code) {
+      if (BOOT_PAYLOAD.languages.some(item => item.code === code)) return code;
+      code = code.includes("-") ? code.slice(0, code.lastIndexOf("-")) : "";
+    }
+    return "en";
+  }
+  function localeText(english, portuguese = english) {
+    return BOOT_PAYLOAD.translations[lang]?.[english] || (lang === "pt" ? portuguese : english);
+  }
   function text(key) {
-    return words[lang][key] || key;
+    return localeText(words.en[key] || key, words.pt[key] || words.en[key] || key);
   }
   const clone = (value) => JSON.parse(JSON.stringify(value));
   function radialProfile(q, female, candidate) {
@@ -2360,11 +2378,13 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
     }
     return false;
   }
-  function status(message, error = false) {
-    $("status").textContent = message;
+  function status(message, error = false, paths = []) {
+    lastStatus = {source: message, error, paths};
+    const localized = localeText(message) + (paths.length ? "\n" + paths.join("\n") : "");
+    $("status").textContent = localized;
     $("status").classList.toggle("warn", error);
     const toast = $("toast-banner");
-    toast.textContent = message;
+    toast.textContent = localized;
     toast.classList.toggle("error", error);
     toast.classList.add("visible");
     clearTimeout(toastTimer);
@@ -2399,7 +2419,7 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
           client_id: clientId,
         })
       )
-        status(text("local"), true);
+        status(words.en.local, true);
     }, 180);
   }
   function change(key, value) {
@@ -2412,7 +2432,7 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
     rows.forEach((row) => {
       const option = document.createElement("option");
       option.value = row[0];
-      option.textContent = row[lang === "pt" ? 1 : 2];
+      option.textContent = localeText(row[2], row[1]);
       element.append(option);
     });
     element.value = String(value);
@@ -2421,8 +2441,9 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
   function control(key) {
     const wrapper = document.createElement("div");
     wrapper.dataset.field = key;
-    const label = labels[key]?.[lang === "pt" ? 0 : 1] || key;
-    const visibleLabel = label.replace(/\s*·\s*(mm|voltas|turns)\s*$/u, "");
+    const source = labels[key] || [key, key];
+    const label = localeText(source[1], source[0]);
+    const visibleLabel = localeText(source[1].replace(/\s*·\s*(mm|turns)\s*$/u, ""), source[0].replace(/\s*·\s*(mm|voltas)\s*$/u, ""));
     if (typeof params[key] === "boolean") {
       wrapper.className = "switch-row";
       const title = document.createElement("span");
@@ -2587,10 +2608,8 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
     $("card-envelope").hidden = !adapter;
     $("card-gardening").hidden = adapter || bolt;
     $("card-measurements").hidden = !(bottle && params.standard === "mason_86");
-    $("family-badge").textContent =
-      options.module.find((row) => row[0] === family)?.[
-        lang === "pt" ? 1 : 2
-      ] || family;
+    const selectedFamily = options.module.find(row => row[0] === family);
+    $("family-badge").textContent = selectedFamily ? localeText(selectedFamily[2], selectedFamily[1]) : family;
   }
   function miniSvg(p) {
     const family = p.module;
@@ -2669,7 +2688,7 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
       meta.className = "preset-meta";
       const name = document.createElement("div");
       name.className = "preset-name";
-      const title = item.name || (lang === "pt" ? item.name_pt : item.name_en);
+      const title = item.user ? item.name : localeText(item.name_en, item.name_pt);
       name.textContent = title;
       name.title = title;
       const sub = document.createElement("div");
@@ -2683,7 +2702,7 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
         remove.textContent = "×";
         remove.setAttribute(
           "aria-label",
-          lang === "pt" ? "Excluir preset" : "Delete preset",
+          localeText("Delete preset", "Excluir preset"),
         );
         remove.onclick = (event) => {
           event.stopPropagation();
@@ -2711,7 +2730,14 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
   function translate() {
     document.documentElement.lang = lang;
     document.documentElement.dataset.theme = theme;
-    $("language").textContent = lang === "pt" ? "PT" : "EN";
+    document.documentElement.dir = BOOT_PAYLOAD.languages.find(item => item.code === lang)?.direction || "ltr";
+    $("language").value = lang;
+    $("language").setAttribute("aria-label", localeText("Language", "Idioma"));
+    document.querySelectorAll("[data-locale-title]").forEach(el => el.title = localeText(el.dataset.localeTitle));
+    document.querySelectorAll("[data-locale-aria]").forEach(el => el.setAttribute("aria-label", localeText(el.dataset.localeAria)));
+    $("inp-save-preset-name").placeholder = localeText("Preset name", "Nome do preset");
+    $("lbl-cross-cut").textContent = view.cutPct ? view.cutPct + "%" : localeText("Off", "Desligado");
+    $("btn-cut-off").textContent = localeText("Off", "Desligado");
     $("theme").textContent = theme === "dark" ? "☾" : "☀";
     document
       .querySelectorAll("[data-i18n]")
@@ -2719,6 +2745,25 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
     buildControls();
     renderPresets();
     drawLoupe();
+    if (report) renderWarnings();
+    if (lastStatus) status(lastStatus.source, lastStatus.error, lastStatus.paths);
+    updateHud();
+  }
+  function renderWarnings() {
+      $("warning").hidden = !(currentWarning || report.experimental);
+      $("warning").textContent = localeText(currentWarning) || text("experimental");
+      $("hud-status-pill").textContent = currentWarning
+        ? "⚠"
+        : report.experimental
+          ? "EXP"
+          : "OK";
+      $("hud-status-pill").className =
+        "hud-status-pill " +
+        (currentWarning || report.experimental ? "warn" : "ok");
+      $("hud-warnings").textContent =
+        currentWarning || report.experimental
+          ? localeText(currentWarning) || text("experimental")
+          : "";
   }
   function syncHost(newHost) {
     host = { ...newHost };
@@ -2738,10 +2783,19 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
       }
     }
     if (!message || typeof message !== "object") return;
+    if (message.type === "preferences_updated") {
+      if (message.client_id === clientId && message.language_request_id < languageRequest) return;
+      if (Number.isFinite(message.language_revision) && message.language_revision < languageRevision) return;
+      languageRevision = message.language_revision || languageRevision;
+      lang = normalizeLanguage(message.lang);
+      params.lang = lang;
+      translate();
+      return;
+    }
     if (message.type === "host_state") {
       syncHost(message.host || {});
       status(
-        lang === "pt" ? "Impressora sincronizada." : "Printer synchronized.",
+        "Printer synchronized.",
       );
       return;
     }
@@ -2756,7 +2810,8 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
         userOverrodeTheme,
       });
       params = initial.params;
-      lang = initial.lang;
+      lang = languageRequest ? lang : normalizeLanguage(initial.lang);
+      params.lang = lang;
       theme = initial.theme;
       params.theme = theme;
       userPresets = initial.userPresets;
@@ -2768,7 +2823,7 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
     }
     if (message.type === "busy") {
       if (message.busy)
-        status(lang === "pt" ? "Gerando malha…" : "Generating mesh…");
+        status("Generating mesh…");
       return;
     }
     if (message.type === "presets_updated") {
@@ -2789,7 +2844,7 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
           acknowledgedRevision,
           message.request_id,
         );
-      params = { ...message.params };
+      params = { ...message.params, lang };
       params.theme = resolveStudioTheme(
         params.theme,
         host,
@@ -2812,27 +2867,13 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
       $("lead").textContent = report.lead_mm.toFixed(2) + " mm";
       $("fit-badge").textContent =
         "cᵣ " + report.radial_clearance_mm.toFixed(3) + " mm";
-      $("warning").hidden = !(message.warning || report.experimental);
-      $("warning").textContent = message.warning || text("experimental");
-      $("hud-status-pill").textContent = message.warning
-        ? "⚠"
-        : report.experimental
-          ? "EXP"
-          : "OK";
-      $("hud-status-pill").className =
-        "hud-status-pill " +
-        (message.warning || report.experimental ? "warn" : "ok");
-      $("hud-warnings").textContent =
-        message.warning || report.experimental
-          ? message.warning || text("experimental")
-          : "";
+      currentWarning = message.warning || "";
+      renderWarnings();
       status(
         message.warning ||
           (params.export_target === "calibration"
-            ? text("notch")
-            : lang === "pt"
-              ? "Malha atualizada."
-              : "Mesh updated."),
+            ? words.en.notch
+            : "Mesh updated."),
         Boolean(message.warning),
       );
       drawLoupe();
@@ -2840,9 +2881,9 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
     }
     if (message.type === "action_result")
       status(
-        (message.message || "") +
-          (message.paths?.length ? "\n" + message.paths.join("\n") : ""),
+        message.message || "",
         message.ok === false,
+        [...(message.detail ? [message.detail] : []), ...(message.paths || [])],
       );
   }
   window.handleHostMessage = handleHostMessage;
@@ -3366,11 +3407,11 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
   $("redo").onclick = () => sendMutation({ type: "redo" });
   $("randomize").onclick = () => sendMutation({ type: "randomize", params });
   $("reset").onclick = () => sendMutation({ type: "reset" });
-  $("language").onclick = () => {
-    lang = lang === "pt" ? "en" : "pt";
+  $("language").onchange = () => {
+    lang = normalizeLanguage($("language").value);
     params.lang = lang;
     translate();
-    scheduleUpdate();
+    send({type: "set_language", lang, client_id: clientId, language_request_id: ++languageRequest});
   };
   $("theme").onclick = () => {
     userOverrodeTheme = true;
@@ -3381,7 +3422,7 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
   };
   $("printer-pill").onclick = () => {
     $("printer-pill").classList.add("syncing");
-    if (!send({ type: "sync_printer" })) status(text("local"), true);
+    if (!send({ type: "sync_printer" })) status(words.en.local, true);
   };
   $("inp-design-name").onchange = (event) => change("name", event.target.value);
   $("target").onchange = (event) => change("export_target", event.target.value);
@@ -3442,13 +3483,13 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
     view.cutAxis = "y";
     view.cutPct = view.cutPct ? 0 : 50;
     $("inp-cross-cut").value = view.cutPct;
-    $("lbl-cross-cut").textContent = view.cutPct ? view.cutPct + "%" : "Off";
+    $("lbl-cross-cut").textContent = view.cutPct ? view.cutPct + "%" : localeText("Off", "Desligado");
     $("cut").classList.add("active");
     $("btn-cut-mode-z").classList.remove("active");
   };
   $("inp-cross-cut").oninput = (event) => {
     view.cutPct = Number(event.target.value);
-    $("lbl-cross-cut").textContent = view.cutPct ? view.cutPct + "%" : "Off";
+    $("lbl-cross-cut").textContent = view.cutPct ? view.cutPct + "%" : localeText("Off", "Desligado");
   };
   $("btn-cut-mode-z").onclick = () => {
     view.cutAxis = "z";
@@ -3463,7 +3504,7 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
   $("btn-cut-off").onclick = () => {
     view.cutPct = 0;
     $("inp-cross-cut").value = 0;
-    $("lbl-cross-cut").textContent = "Off";
+    $("lbl-cross-cut").textContent = localeText("Off", "Desligado");
   };
   document.querySelectorAll("[data-cam]").forEach(
     (button) =>
@@ -3556,7 +3597,7 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
   params.theme = theme;
   translate();
   syncHost(host);
-  status(text("waiting"));
+  status(words.en.waiting);
   if (
     !send({
       type: "ready",
@@ -3565,6 +3606,6 @@ body[data-mode="dock"] .thread-loupe{display:none}body[data-mode="dock"] .viewpo
       client_id: clientId,
     })
   )
-    status(text("local"), true);
+    status(words.en.local, true);
 })();
 </script></body></html>"""

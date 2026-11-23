@@ -1,5 +1,15 @@
 # Validation status
 
+## Modular-language development verification — 2026-11-23
+
+The Thread Studio template now supports PT, EN, ES, IT, FR, DE and JA through independent JSON packs. All **90** local tests passed with `-B -W error`, including identical vertices/triangles across languages, persisted choices, late geometry/language replies and future JSON-only language discovery in source, standalone, universal bundle and wheel.
+
+Isolated Chromium checks passed **28 language/theme/layout combinations** (seven languages × two themes × page/dock) and **28 real STL/3MF exports** (seven languages × two layouts × two formats). The twelve existing template layout samples had zero issues; nineteen editing, geometry and export interactions passed. Browser screenshots and reports are test artifacts. These checks use the production controller and meshes with native transport disabled, and do not start printing.
+
+Language switching updates existing Mason 86 warnings, preserves personal text, survives printer synchronization/reload and synchronizes page/dock without geometry requests. A new optional catalog can be partial and uses English fallback; the seven shipped catalogs have matching coverage for all production labels/options/presets/accessibility vocabulary.
+
+The build with `--no-install` passed, all three distribution formats were reviewed, and the standalone remains data-compressed with no additional runtime dependency. Cross-platform CI and native testing of this changed multilingual binary are separate gates; the historical native results below refer to their recorded versions. Physical engagement, sealing, pressure and food-contact suitability remain unverified.
+
 ## Version 1.1.0 verification — 2026-11-18
 
 A native session in **OrcaSlicer 2.5.1 on Windows** opened the Box and Thread studio pages, generated their real geometry, exported 3MF files and sent import requests through WM_COPYDATA. The base and lid from each plugin were then visually confirmed on the Plater. This observation goes beyond the transport acknowledgement; the plugin's status message itself still reports only that an import request was sent.

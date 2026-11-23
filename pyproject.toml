@@ -12,7 +12,7 @@ dependencies = ["numpy>=1.26"]
 [tool.setuptools.packages.find]
 where = ["src"]
 [tool.setuptools.package-data]
-thread_studio = ["icon.svg"]
+thread_studio = ["icon.svg", "locales/*.json"]
 [tool.orcaslicer.plugin]
 id = "orca-thread-studio"
 name = "Orca Thread Studio"

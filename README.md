@@ -4,7 +4,9 @@ Offline parametric thread, bottle and adapter generator for **OrcaSlicer 2.5.1+*
 
 ![Studio icon](assets/icon.svg)
 
-English and Brazilian Portuguese interface, a full studio tab and a compact dock. Version 1.1 adopts the **Orca Vase Studio template**: compact header, filtered preset gallery, parameter cards, paired sliders/numeric fields, floating inspection tools and a fixed export footer. See [template provenance](docs/UI_TEMPLATE.md).
+Seven offline interface languages (Português, English, Español, Italiano, Français, Deutsch and 日本語), a full studio tab and a compact dock. Version 1.1 adopts the **Orca Vase Studio template**: compact header, filtered preset gallery, parameter cards, paired sliders/numeric fields, floating inspection tools and a fixed export footer. See [template provenance](docs/UI_TEMPLATE.md).
+
+Language selection follows Box Studio and is remembered across restarts without regenerating the mesh. Additional languages are independent JSON data packs; see [language packs](docs/LANGUAGE_PACKS.md) and the [cross-Studio audit](docs/LANGUAGE_AUDIT.md).
 
 ## Features
 
@@ -13,7 +15,7 @@ English and Brazilian Portuguese interface, a full studio tab and a compact dock
 - Bottle caps and open necks: experimental PCO-1881 and Mason 70; Mason 86 requires measured dimensions and explicit confirmation.
 - Smooth tapered, barbed, externally threaded and internally threaded hose/vacuum adapter ends.
 - Solid or hollow bolts and nuts with hex, knurled or wing shapes.
-- Twelve bilingual presets, editable user presets, shared page/dock state, undo, redo and reset.
+- Twelve localized presets, editable user presets, shared page/dock state, undo, redo and reset.
 - Three calibration rings with physical 1/2/3 notch markings and 0.10/0.18/0.26 mm diametral clearances.
 - WebGL2 preview of the **same vertices and triangles exported**, axial clipping, screw-motion animation and a 2D analytical engagement loupe that follows opening and rotation.
 - Binary STL and multi-object 3MF, original-scale bed packing and mechanical slicing defaults.
@@ -32,7 +34,7 @@ After installing or updating, **close and reopen OrcaSlicer** to load the new bu
 
 ## Develop and verify
 
-All 68 local version 1.1.0 tests passed. In OrcaSlicer 2.5.1 on Windows, a native session using the 1.1.0 interface before the final theme adapters confirmed page activation, real geometry generation, 3MF export, WM_COPYDATA delivery and the container base/lid visibly loaded on the Plater. The final dock and final theme adapters still need native verification; live macOS/Linux integration also remains pending. No slicing, printing or physical fit test was performed. See [validation status](docs/VALIDATION.md).
+The multilingual development snapshot adds catalog coverage, persisted preferences, geometry invariance and real isolated browser/export checks. See [language validation](docs/LANGUAGE_PACKS.md#verification). Historical native checks below refer to their recorded binaries. In OrcaSlicer 2.5.1 on Windows, a native session using the 1.1.0 interface before the final theme adapters confirmed page activation, real geometry generation, 3MF export, WM_COPYDATA delivery and the container base/lid visibly loaded on the Plater. The final dock and final theme adapters still need native verification; live macOS/Linux integration also remains pending. No slicing, printing or physical fit test was performed. See [validation status](docs/VALIDATION.md).
 
 Python >=3.12 and NumPy >=1.26 are required. Runtime generation is offline. The OrcaSlicer shared Python package directory is discovered if NumPy is not on the standard import path.
 

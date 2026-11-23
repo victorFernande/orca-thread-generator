@@ -72,9 +72,9 @@ async function clickAction(page,name) {
 }
 async function smoke(page,slug,url,passed) {
   await page.goto(url+'/?theme=dark');await waitGeometry(page);passed.push('Python mesh preview');
-  let n=await geometryCount(page);await page.locator('#language, #lang, #btn-lang').first().click();
+  let n=await geometryCount(page);await page.locator('#language').selectOption('en');
   await page.waitForFunction(()=>document.documentElement.lang==='en');passed.push('PT/EN');
-  if(slug==='thread')await waitGeometry(page,n,{lang:'en'});
+  if(slug==='thread'&&(await geometryCount(page))!==n)throw Error('Language change regenerated mesh');
   n=await geometryCount(page);await page.locator('#theme, #btn-theme').first().click();
   await page.waitForFunction(()=>document.documentElement.dataset.theme==='light');passed.push('Light/dark');
   if(slug==='thread')await waitGeometry(page,n,{theme:'light'});
@@ -96,7 +96,7 @@ async function smoke(page,slug,url,passed) {
   await page.waitForFunction(before=>window.__hostMessages.slice(before).some(m=>m.type==='action_result'&&m.ok===true),actionBefore,{timeout:180000});passed.push('Real isolated 3MF export');
   const sentBefore=await page.evaluate(()=>window.__hostMessages.length);
   await clickAction(page,'send');
-  await page.waitForFunction(before=>window.__hostMessages.slice(before).some(m=>m.type==='action_result'&&m.ok===false&&m.message?.includes('native transport disabled')),sentBefore,{timeout:180000});passed.push('No false success when native transport fails');
+  await page.waitForFunction(before=>window.__hostMessages.slice(before).some(m=>m.type==='action_result'&&m.ok===false&&m.detail?.includes('native transport disabled')),sentBefore,{timeout:180000});passed.push('No false success when native transport fails');
   n=await geometryCount(page);await page.locator('#randomize, #btn-randomize').first().click();await waitGeometry(page,n);passed.push('Validated Surprise');
   await page.goto(url+'/?theme=dark&dock');await waitGeometry(page);
   for(const tab of ['shape','textures','print','presets']){

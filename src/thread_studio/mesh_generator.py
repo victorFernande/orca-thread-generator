@@ -145,7 +145,7 @@ def _validate_standard(p):
         and not p["measurements_confirmed"]
     ):
         raise ValueError(
-            "Mason 86 experimental: confirme medidas reais antes de gerar / confirm measured dimensions before generation"
+            "Mason 86 experimental: confirm measured dimensions before generation"
         )
 
 

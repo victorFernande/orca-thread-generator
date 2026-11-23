@@ -116,7 +116,8 @@ class ExportBridgeTests(unittest.TestCase):
             release.set()
             c._last_plater_worker.join(5)
             self.assertFalse(out[-1]["ok"])
-            self.assertIn("test refusal", out[-1]["message"])
+        self.assertEqual(out[-1]["message"], "Transport failed.")
+        self.assertIn("test refusal", out[-1]["detail"])
 
     def test_html_javascript_syntax_and_offline(self):
         html = get_studio_html()

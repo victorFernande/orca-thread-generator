@@ -1,6 +1,6 @@
 # Orca Thread Studio — community listing draft
 
-Orca Thread Studio is an offline parametric generator for OrcaSlicer 2.5.1+: containers with screw lids, bottle-cap experiments, hose/vacuum adapters, bolts, nuts and hand knobs. It offers English/Portuguese controls, grey/teal light and dark themes, a full studio tab and a compact dock, plus STL/3MF export and direct Plater import requests.
+Orca Thread Studio is an offline parametric generator for OrcaSlicer 2.5.1+: containers with screw lids, bottle-cap experiments, hose/vacuum adapters, bolts, nuts and hand knobs. It offers Portuguese, English, Spanish, Italian, French, German and Japanese controls, grey/teal light and dark themes, a full studio tab and a compact dock, plus STL/3MF export and direct Plater import requests.
 
 A NumPy mesh engine generates connected watertight surfaces. The WebGL2 viewport shows those same triangles. A moving 2D engagement loupe, Higbee starts, multiple thread starts, configurable clearances and three physically marked test rings help calibrate printable fits.
 
