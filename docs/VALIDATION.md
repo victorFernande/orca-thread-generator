@@ -2,7 +2,7 @@
 
 ## Modular-language development verification — 2026-11-23
 
-The Thread Studio template now supports PT, EN, ES, IT, FR, DE and JA through independent JSON packs. All **90** local tests passed with `-B -W error`, including identical vertices/triangles across languages, persisted choices, late geometry/language replies and future JSON-only language discovery in source, standalone, universal bundle and wheel.
+The Thread Studio template now supports PT, EN, ES, IT, FR, DE and JA through independent JSON packs. All **91** local tests passed with `-B -W error`, including identical vertices/triangles across languages, persisted choices, late geometry/language replies and future JSON-only language discovery in source, standalone, universal bundle and wheel.
 
 Isolated Chromium checks passed **28 language/theme/layout combinations** (seven languages × two themes × page/dock) and **28 real STL/3MF exports** (seven languages × two layouts × two formats). The twelve existing template layout samples had zero issues; nineteen editing, geometry and export interactions passed. Browser screenshots and reports are test artifacts. These checks use the production controller and meshes with native transport disabled, and do not start printing.
 

@@ -94,6 +94,20 @@ class LanguagePreferenceTests(unittest.TestCase):
             self.assertEqual(len(out),1)
             self.assertEqual(json.loads((Path(td)/'ui_preferences.json').read_text())['lang'],'ja')
 
+    def test_old_client_export_and_pending_edit_keep_the_current_language(self):
+        with tempfile.TemporaryDirectory() as td, patch.object(plugin, '_resolve_storage_dir', return_value=Path(td)):
+            c=plugin.ThreadStudioController()
+            c.build_initial_context()
+            old=dict(c.current_params,height=70,lang='pt')
+            c.handle_message({'type':'set_language','lang':'it'},lambda m:None)
+            with patch.object(c,'_write_exports',return_value=['test.3mf']) as writer:
+                c.handle_message({'type':'export_file','params':old,'format':'3mf'},lambda m:None)
+                c._last_plater_worker.join(5)
+                self.assertEqual(writer.call_args.args[0]['lang'],'it')
+            with patch.object(c,'_queue_geometry'):
+                c.handle_message({'type':'undo','pending_params':dict(old,height=75)},lambda m:None)
+            self.assertEqual(c.current_params['lang'],'it')
+
     def test_language_does_not_change_actual_vertices_or_triangles(self):
         reference = collect_target_meshes({'resolution':48})
         for code in SUPPORTED_LANGUAGES:

@@ -1271,7 +1271,7 @@ class ThreadStudioController:
         pending = message["pending_params"]
         if not isinstance(pending, dict):
             raise ValueError("pending_params must contain a parameter object")
-        self.set_current_params(pending)
+        self.set_current_params(dict(pending, lang=self.current_params["lang"]))
 
     def _queue_geometry(self, request_id=None, client_id=None):
         with self._lock:
@@ -1454,7 +1454,8 @@ class ThreadStudioController:
                 self._broadcast(dict(type="presets_updated", user_presets=data))
                 return
             if action in ("export_file", "send_to_plater"):
-                p = self.set_current_params(msg.get("params", self.current_params))
+                with self._lock:
+                    p = self.set_current_params(dict(msg.get("params", self.current_params), lang=self._current_params["lang"]))
                 fmt = msg.get("format", "3mf")
                 send_fn(
                     dict(
