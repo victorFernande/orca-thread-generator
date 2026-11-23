@@ -151,6 +151,7 @@ button, input, select {
 /* Header Bar */
 .studio-header {
   display: flex;
+  min-height: 43px;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
