@@ -1442,14 +1442,14 @@ _SHARED_CONTROLLER = ThreadStudioController()
 
 
 class ThreadStudioPageCapability(orca.pages.PagesPluginCapabilityBase):
-    """Full-screen top-bar tab (`Gerador de Roscas`) beside Prepare / Preview / Device."""
+    """Full-screen top-bar tab (`Thread Studio`) beside Prepare / Preview / Device."""
 
     def __init__(self, controller: ThreadStudioController | None = None) -> None:
         super().__init__()
         self._controller = controller or _SHARED_CONTROLLER
 
     def get_name(self) -> str:
-        return "Gerador de Roscas"
+        return "Thread Studio"
 
     def get_default_config(self) -> dict[str, Any]:
         return {

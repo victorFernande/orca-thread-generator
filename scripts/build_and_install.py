@@ -15,6 +15,7 @@ import base64
 import csv
 import hashlib
 import io
+import json
 import os
 import re
 import shutil
@@ -543,10 +544,66 @@ def _atomic_install_file(source: Path, destination: Path, install_dir: Path) -> 
             temporary.unlink(missing_ok=True)
 
 
+def renamed_page_state(content: bytes) -> bytes:
+    """Rename only saved tab visibility; existing new-name preferences win."""
+    try:
+        state = json.loads(content)
+    except (ValueError, UnicodeError):
+        return content
+    if not isinstance(state, dict) or not isinstance(state.get("capabilities"), list):
+        return content
+    capabilities = state["capabilities"]
+    if any(isinstance(c, dict) and "Thread Studio" in c for c in capabilities):
+        return content
+    old = [c for c in capabilities if isinstance(c, dict) and "Gerador de Roscas" in c]
+    if len(old) != 1 or type(old[0]["Gerador de Roscas"]) is not bool:
+        return content
+    old[0]["Thread Studio"] = old[0].pop("Gerador de Roscas")
+    return (json.dumps(state, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
+
+def _atomic_install_bytes(content: bytes, destination: Path, install_dir: Path) -> None:
+    """Replace a plugin-owned state entry without writing through old links."""
+    if destination.parent.resolve() != install_dir.resolve():
+        raise RuntimeError("State destination escaped the Thread plugin directory")
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb", dir=install_dir, prefix=".orca_thread_state_", suffix=".tmp", delete=False
+        ) as handle:
+            temporary = Path(handle.name)
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, destination)
+        temporary = None
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def _migrate_page_visibility(install_dir: Path) -> None:
+    for name in (".install_state.json", "install_state.json"):
+        path = install_dir / name
+        if path.is_symlink():
+            raise RuntimeError("Refusing to migrate a linked Thread install state")
+        if not path.is_file():
+            continue
+        before = path.read_bytes()
+        after = renamed_page_state(before)
+        if after == before:
+            continue
+        backup = path.with_name(path.stem + ".before-thread-studio.json")
+        if not backup.exists() and not backup.is_symlink():
+            _atomic_install_bytes(before, backup, install_dir)
+        _atomic_install_bytes(after, path, install_dir)
+
+
 def install_plugin(bundle_path: Path) -> Path:
     """Install two files only inside this plugin's validated directory.
 
-    Preserve install-state files and replace old bundle/icon links atomically,
+    Preserve grants and tab visibility, migrating only the legacy tab name.
+    Replace old bundle/icon links atomically,
     so a link can never redirect writes into another plugin or arbitrary file.
     """
     plugin_root = (get_orca_data_dir() / "orca_plugins").resolve()
@@ -559,6 +616,8 @@ def install_plugin(bundle_path: Path) -> Path:
     install_dir.mkdir(parents=True, exist_ok=True)
     if install_dir.resolve() != expected_dir:
         raise RuntimeError("Installation directory changed after validation")
+
+    _migrate_page_visibility(install_dir)
 
     for item in list(install_dir.iterdir()):
         if item.name in PRESERVED_SIDE_FILES:
@@ -661,7 +720,7 @@ def verify_bundle_smoke(bundle_path: Path) -> None:
 
             page_cap = mod.ThreadStudioPageCapability()
             dock_cap = mod.ThreadStudioDockCapability()
-            assert page_cap.get_name() == "Gerador de Roscas"
+            assert page_cap.get_name() == "Thread Studio"
             assert dock_cap.get_name() == "Orca Thread Studio - Painel Lateral"
 
             # Direct temporary storage during smoke check (and verify standalone icon auto-materialization!)
