@@ -23,6 +23,7 @@ import tempfile
 import tokenize
 import tomllib
 import zipfile
+import zlib
 from pathlib import Path
 
 sys.dont_write_bytecode = True
@@ -285,6 +286,28 @@ def _strip_internal_imports(source: str) -> tuple[str, set[str]]:
     return "".join(lines), future_features
 
 
+def _compact_studio_template(source: str, literal_name: str) -> str:
+    """Compress only the offline document; all executable bridge code stays readable."""
+    tree = ast.parse(source)
+    assignments = [node for node in tree.body if isinstance(node, ast.Assign)
+                   and any(isinstance(target, ast.Name) and target.id == literal_name
+                           for target in node.targets)]
+    if len(assignments) != 1:
+        raise ValueError("Expected exactly one Studio template: " + literal_name)
+    node = assignments[0]
+    if not isinstance(node.value, ast.Constant) or not isinstance(node.value.value, str):
+        raise ValueError("The Studio document must be a plain text literal.")
+    document = node.value.value
+    payload = base64.b64encode(zlib.compress(document.encode("utf-8"), 9))
+    expression = (literal_name + " = __import__('zlib').decompress(__import__('base64').b64decode("
+                  + repr(payload) + ")).decode('utf-8')\n")
+    lines = source.splitlines(keepends=True)
+    lines[node.lineno - 1:node.end_lineno] = [expression]
+    compact = "".join(lines)
+    compile(compact, "compact-studio-template", "exec")
+    return compact
+
+
 def build_bundle() -> Path:
     """Compile all `src/thread_studio/*.py` modules into `dist/orca_thread_generator.py`."""
     missing = [m for m in MODULE_ORDER if not (SRC_PKG_DIR / m).is_file()]
@@ -323,6 +346,8 @@ def build_bundle() -> Path:
             src = _rename_colliding_privates(src, mod_stem, rename_set)
 
         transformed, fut = _strip_internal_imports(src)
+        if mod_file == "studio_ui.py":
+            transformed = _compact_studio_template(transformed, "_HTML")
         all_future_features.update(fut)
 
         banner = f"\n# {'=' * 75}\n# MODULE: thread_studio.{mod_stem}\n# {'=' * 75}\n\n"
