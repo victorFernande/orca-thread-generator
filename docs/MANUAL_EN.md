@@ -2,7 +2,7 @@
 
 ## First model
 
-Open **Gerador de Roscas** or the **Orca Thread Studio — Painel Lateral** script. Choose a library project, then edit nominal diameter, axial pitch, threaded length, handedness and starts. Lead is pitch × starts. Diametral clearance is the total diameter difference; radial clearance is half of it.
+Open **Thread Studio** or the **Orca Thread Studio — Painel Lateral** script. Choose a library project, then edit nominal diameter, axial pitch, threaded length, handedness and starts. Lead is pitch × starts. Diametral clearance is the total diameter difference; radial clearance is half of it.
 
 Before a full print, select **3 calibration rings**. One, two or three physical notches identify diametral clearances of 0.10, 0.18 and 0.26 mm. Test the rings against the corresponding male part. They do not replace a measured hardware gauge. Select the clearance that works with your actual filament, printer and orientation.
 

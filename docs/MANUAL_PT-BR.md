@@ -2,7 +2,7 @@
 
 ## Primeiro projeto
 
-1. Abra a aba **Gerador de Roscas**, ou o script **Orca Thread Studio — Painel Lateral**.
+1. Abra a aba **Thread Studio**, ou o script **Orca Thread Studio — Painel Lateral**.
 2. Escolha um dos 12 projetos da biblioteca. Os presets são pontos de partida editáveis.
 3. Ajuste diâmetro nominal, passo axial, comprimento e número de entradas. O avanço por volta é passo × entradas; mudar o número de entradas não muda o passo axial.
 4. Defina a folga diametral e axial. A lupa informa a metade da folga diametral como folga radial.
