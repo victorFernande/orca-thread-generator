@@ -129,7 +129,7 @@ class ExportBridgeTests(unittest.TestCase):
                 path = Path(d) / "ui.js"
                 path.write_text(script, encoding="utf-8")
                 result = subprocess.run(
-                    ["node", "--check", str(path)], capture_output=True, text=True
+                    ["node", "--check", str(path)], capture_output=True, text=True, encoding="utf-8"
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
 
@@ -151,7 +151,7 @@ class ExportBridgeTests(unittest.TestCase):
                 + ".map(q=>[__threadStudio.radialProfile(q,false),__threadStudio.radialProfile(q,true)])));"
             )
             result = subprocess.run(
-                ["node"], input=program, capture_output=True, text=True
+                ["node"], input=program, capture_output=True, text=True, encoding="utf-8"
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             expected = np.c_[

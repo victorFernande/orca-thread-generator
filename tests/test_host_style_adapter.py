@@ -19,7 +19,7 @@ class HostThemeTests(unittest.TestCase):
         result = subprocess.run(
             ["node"],
             input=script + "\n" + expression,
-            text=True,
+            text=True, encoding="utf-8",
             capture_output=True,
             check=False,
         )

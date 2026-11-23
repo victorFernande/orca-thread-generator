@@ -417,7 +417,7 @@ class VisualTemplateTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which("node"), "Node.js is needed for JavaScript syntax verification")
     def test_javascript_is_syntactically_valid(self):
         script = "\n".join(Document(studio_html()).scripts)
-        result = subprocess.run([shutil.which("node"), "--check"], input=script, text=True, capture_output=True, timeout=30)
+        result = subprocess.run([shutil.which("node"), "--check"], input=script, text=True, encoding="utf-8", capture_output=True, timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr)
 
     @unittest.skipUnless(shutil.which("node"), "Node.js is needed for transform verification")
@@ -447,7 +447,7 @@ console.log('Headless transform-aware Thread scene bounds: PASS');
 """
         result = subprocess.run(
             [shutil.which("node")], input=script + checks,
-            text=True, capture_output=True, timeout=30,
+            text=True, encoding="utf-8", capture_output=True, timeout=30,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
 
@@ -472,7 +472,7 @@ console.log(JSON.stringify(cases.map(({params,levels})=>({
 """
         result = subprocess.run(
             [shutil.which("node")], input=script + query,
-            text=True, capture_output=True, timeout=30,
+            text=True, encoding="utf-8", capture_output=True, timeout=30,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         actual = json.loads(result.stdout)
@@ -531,7 +531,7 @@ console.log(JSON.stringify(undo));
 """
         result = subprocess.run(
             [shutil.which("node")], input=script + checks,
-            text=True, capture_output=True, timeout=30,
+            text=True, encoding="utf-8", capture_output=True, timeout=30,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         undo = json.loads(result.stdout)
@@ -621,7 +621,7 @@ assert.deepEqual(press('BODY','z',false,false),{actions:[],prevented:false});
 """
         result = subprocess.run(
             [shutil.which("node")], input=fixture + binding.group() + checks,
-            text=True, capture_output=True, timeout=30,
+            text=True, encoding="utf-8", capture_output=True, timeout=30,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
 

@@ -246,7 +246,7 @@ class CameraAndBootTests(unittest.TestCase):
         html = get_studio_html(initial_context=dict(params=normalize_params(params)))
         script = html.split("<script>", 1)[1].split("</script>", 1)[0]
         result = subprocess.run(
-            ["node"], input=script + suffix, text=True, capture_output=True
+            ["node"], input=script + suffix, text=True, encoding="utf-8", capture_output=True
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         return json.loads(result.stdout)
@@ -421,7 +421,7 @@ class CameraAndBootTests(unittest.TestCase):
             ["node"],
             input=script
             + ";process.stdout.write(JSON.stringify(__threadStudio.getState()));",
-            text=True,
+            text=True, encoding="utf-8",
             capture_output=True,
         )
         self.assertEqual(result.returncode, 0, result.stderr)

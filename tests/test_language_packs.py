@@ -40,7 +40,7 @@ class LanguagePackTests(unittest.TestCase):
         html = get_studio_html()
         script = html.split('<script>')[-1].split('</script>')[0]
         vocabulary = script[script.index('  const words ='):script.index('  function normalizeLanguage(')]
-        output = subprocess.check_output(['node', '-e', vocabulary + '\nconsole.log(JSON.stringify({words,labels,options}));'], text=True)
+        output = subprocess.check_output(['node', '-e', vocabulary + '\nconsole.log(JSON.stringify({words,labels,options}));'], text=True, encoding="utf-8")
         actual = json.loads(output)
         phrases = set(actual['words']['en'].values())
         for pair in actual['labels'].values():
@@ -130,7 +130,7 @@ class LanguagePackTests(unittest.TestCase):
             env={k:v for k,v in os.environ.items() if k!='PYTHONPATH'}
             pages=[]
             def invoke(code,*args):
-                result=subprocess.run([sys.executable,'-B','-W','error','-c',code,*map(str,args)],cwd=project,env=env,check=True,capture_output=True,text=True)
+                result=subprocess.run([sys.executable,'-B','-W','error','-c',code,*map(str,args)],cwd=project,env=env,check=True,capture_output=True,text=True, encoding="utf-8")
                 return json.loads(result.stdout.strip().splitlines()[-1])
             inspect='''import json,sys
 sys.path.insert(0,sys.argv[1])
@@ -144,7 +144,7 @@ print(json.dumps({'codes':list(SUPPORTED_LANGUAGES),'resolved':normalize_languag
             self.assertEqual(source['resolved'],'nl-nl');self.assertEqual(source['host'],'nl-nl')
             self.assertIn('nl',source['codes']);self.assertEqual(source['translated'],'Modellengalerij')
             self.assertIn('Nederlands',source['page']);self.assertIn('lang="nl-nl"',source['dock'])
-            subprocess.run([sys.executable,'-B','-W','error',str(project/'scripts/build_and_install.py'),'--no-install'],cwd=project,env=env,check=True,capture_output=True,text=True)
+            subprocess.run([sys.executable,'-B','-W','error',str(project/'scripts/build_and_install.py'),'--no-install'],cwd=project,env=env,check=True,capture_output=True,text=True, encoding="utf-8")
             bundle_inspect='''import importlib.util,json,sys
 s=importlib.util.spec_from_file_location('thread_extra_locale',sys.argv[1]);m=importlib.util.module_from_spec(s);sys.modules[s.name]=m;s.loader.exec_module(m)
 print(json.dumps({'codes':list(m.SUPPORTED_LANGUAGES),'resolved':m.normalize_language('nl_NL.UTF-8'),'translated':m.TRANSLATIONS['nl']['Model Gallery'],'html':m.get_studio_html('dock',{'lang':'nl-nl'}),'page':m.get_studio_html('page',{'lang':'nl'}),'dock':m.get_studio_html('dock',{'lang':'nl-nl'})}))
@@ -166,7 +166,7 @@ print(json.dumps({'codes':list(m.SUPPORTED_LANGUAGES),'resolved':m.normalize_lan
                 fixtures=project/'language-fixtures.json'
                 fixtures.write_text(json.dumps(pages,ensure_ascii=False),encoding='utf-8')
                 browser_result=subprocess.run(['node',str(ROOT/'scripts/check_language_pack_extension.cjs'),str(fixtures)],
-                               cwd=ROOT,env=os.environ.copy(),capture_output=True,text=True,timeout=120)
+                               cwd=ROOT,env=os.environ.copy(),capture_output=True,text=True, encoding="utf-8",timeout=120)
                 self.assertEqual(browser_result.returncode,0,browser_result.stderr+browser_result.stdout)
             # Adding data next to an existing standalone file also works on restart.
             sidecar=project/'dist/locales';sidecar.mkdir()
